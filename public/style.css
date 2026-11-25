@@ -1,3 +1,4 @@
+
 /* Odd Word Out. One narrow column designed for a phone held in one hand.
    Color: paper-blue ground, ink text, ultramarine accent, orange signal for the odd ones.
    Type: Bricolage Grotesque for display, DM Sans for text. */
@@ -31,6 +32,8 @@ body{
 .top .right{display:flex;align-items:center;gap:.5rem}
 .leave{font:inherit;font-size:.85rem;font-weight:500;background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:2rem;padding:.25rem .8rem;cursor:pointer}
 .leave.armed{border-color:var(--signal);color:var(--signal)}
+.leave{position:relative}
+.badge{display:inline-block;min-width:1.2rem;margin-left:.4rem;padding:0 .35rem;border-radius:1rem;background:var(--signal);color:#fff;font-size:.72rem;font-weight:700;line-height:1.2rem;text-align:center}
 h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance}
 h1{font-size:2.4rem;font-weight:800;letter-spacing:-.02em}
 h2{font-size:.78rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
@@ -94,10 +97,7 @@ input[type=text]:focus-visible,.btn:focus-visible,.chip:focus-visible,.pick:focu
 .view>*{animation:in .18s ease-out}
 @keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.view>*{animation:none}.btn:active:not(:disabled){transform:none}}
-<<<<<<< HEAD
 
-.leave{position:relative}
-.badge{display:inline-block;min-width:1.2rem;margin-left:.4rem;padding:0 .35rem;border-radius:1rem;background:var(--signal);color:#fff;font-size:.72rem;font-weight:700;line-height:1.2rem;text-align:center}
 .voicebar{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:.8rem;padding:.6rem .8rem}
 .voicebar.on{border-color:var(--good)}
 .voicebar>div{min-width:0}
@@ -113,5 +113,4 @@ input[type=text]:focus-visible,.btn:focus-visible,.chip:focus-visible,.pick:focu
 .msg .bub{display:inline-block;background:var(--surface);border:1px solid var(--line);border-radius:.9rem;padding:.5rem .8rem;overflow-wrap:anywhere;text-align:left}
 .msg.mine .bub{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
 .chatrow{flex:none}
-=======
->>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
+

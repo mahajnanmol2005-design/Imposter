@@ -1,11 +1,8 @@
+
 "use strict";
 // Keeps the app shell available so the icon opens instantly. Game traffic runs over the
 // WebSocket and is never cached. Files are fetched fresh when online, so updates arrive on their own.
-<<<<<<< HEAD
 const VERSION = "oowl-v2";
-=======
-const VERSION = "oowl-v1";
->>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
 const SHELL = [
   "/",
   "/index.html",
@@ -52,3 +49,4 @@ self.addEventListener("fetch", (e) => {
       .catch(() => caches.match(r).then((hit) => hit || caches.match("/index.html")))
   );
 });
+
