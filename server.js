@@ -41,7 +41,7 @@ function randomId() {
 }
 
 function randomCode() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   let code = "";
 
   for (let i = 0; i < 5; i++) {
