@@ -40,7 +40,7 @@ const CSP = [
   "font-src https://fonts.gstatic.com",
   "img-src 'self' data:",
   "connect-src 'self' ws: wss:",
-  "manifest-src 'none'",
+  "manifest-src 'self'",
   "base-uri 'none'",
   "form-action 'none'",
   "frame-ancestors 'none'",
