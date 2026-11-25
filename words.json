@@ -1,0 +1,1604 @@
+{
+ "cats": [
+  [
+   "mixed",
+   "Mixed"
+  ],
+  [
+   "campus",
+   "Campus life"
+  ],
+  [
+   "subjects",
+   "School & science"
+  ],
+  [
+   "street",
+   "Street food"
+  ],
+  [
+   "sports",
+   "Sports & games"
+  ],
+  [
+   "travel",
+   "Travel India"
+  ],
+  [
+   "movies",
+   "Cinema"
+  ],
+  [
+   "clothes",
+   "Clothes"
+  ],
+  [
+   "tech",
+   "Phone & apps"
+  ],
+  [
+   "family",
+   "Family & home"
+  ],
+  [
+   "jobs",
+   "Jobs"
+  ],
+  [
+   "festivals",
+   "Festivals"
+  ],
+  [
+   "nature",
+   "Nature & weather"
+  ],
+  [
+   "famousin",
+   "Famous Indians"
+  ],
+  [
+   "famousworld",
+   "Famous worldwide"
+  ],
+  [
+   "landmarks",
+   "World landmarks"
+  ],
+  [
+   "worldfood",
+   "World food"
+  ],
+  [
+   "cities",
+   "Countries & cities"
+  ],
+  [
+   "inventions",
+   "Inventions"
+  ],
+  [
+   "arts",
+   "Music & art"
+  ],
+  [
+   "space",
+   "Space"
+  ],
+  [
+   "food",
+   "Food"
+  ],
+  [
+   "places",
+   "Places"
+  ],
+  [
+   "animals",
+   "Animals"
+  ],
+  [
+   "things",
+   "Things"
+  ],
+  [
+   "activities",
+   "Activities"
+  ]
+ ],
+ "pairs": {
+  "famousin": [
+   [
+    "Sachin Tendulkar",
+    "Virat Kohli"
+   ],
+   [
+    "MS Dhoni",
+    "Rohit Sharma"
+   ],
+   [
+    "Lata Mangeshkar",
+    "Asha Bhosle"
+   ],
+   [
+    "APJ Abdul Kalam",
+    "Vikram Sarabhai"
+   ],
+   [
+    "Ratan Tata",
+    "Mukesh Ambani"
+   ],
+   [
+    "Sundar Pichai",
+    "Satya Nadella"
+   ],
+   [
+    "PV Sindhu",
+    "Saina Nehwal"
+   ],
+   [
+    "Srinivasa Ramanujan",
+    "Aryabhata"
+   ],
+   [
+    "Rabindranath Tagore",
+    "Premchand"
+   ],
+   [
+    "Amitabh Bachchan",
+    "Shah Rukh Khan"
+   ],
+   [
+    "A. R. Rahman",
+    "Ilaiyaraaja"
+   ],
+   [
+    "Neeraj Chopra",
+    "Milkha Singh"
+   ],
+   [
+    "Mary Kom",
+    "Sania Mirza"
+   ],
+   [
+    "Kapil Dev",
+    "Sunil Gavaskar"
+   ],
+   [
+    "Kishore Kumar",
+    "Mohammed Rafi"
+   ]
+  ],
+  "famousworld": [
+   [
+    "Albert Einstein",
+    "Isaac Newton"
+   ],
+   [
+    "Lionel Messi",
+    "Cristiano Ronaldo"
+   ],
+   [
+    "Mahatma Gandhi",
+    "Nelson Mandela"
+   ],
+   [
+    "William Shakespeare",
+    "Charles Dickens"
+   ],
+   [
+    "Mozart",
+    "Beethoven"
+   ],
+   [
+    "Thomas Edison",
+    "Nikola Tesla"
+   ],
+   [
+    "Marie Curie",
+    "Ada Lovelace"
+   ],
+   [
+    "Leonardo da Vinci",
+    "Michelangelo"
+   ],
+   [
+    "Bill Gates",
+    "Steve Jobs"
+   ],
+   [
+    "Usain Bolt",
+    "Carl Lewis"
+   ],
+   [
+    "Roger Federer",
+    "Rafael Nadal"
+   ],
+   [
+    "Serena Williams",
+    "Venus Williams"
+   ],
+   [
+    "Michael Jackson",
+    "Elvis Presley"
+   ],
+   [
+    "Neil Armstrong",
+    "Yuri Gagarin"
+   ],
+   [
+    "Pablo Picasso",
+    "Vincent van Gogh"
+   ],
+   [
+    "Stephen Hawking",
+    "Carl Sagan"
+   ],
+   [
+    "Charles Darwin",
+    "Gregor Mendel"
+   ],
+   [
+    "Mother Teresa",
+    "Florence Nightingale"
+   ]
+  ],
+  "landmarks": [
+   [
+    "Eiffel Tower",
+    "Statue of Liberty"
+   ],
+   [
+    "Great Wall of China",
+    "Pyramids of Giza"
+   ],
+   [
+    "Big Ben",
+    "Leaning Tower of Pisa"
+   ],
+   [
+    "Colosseum",
+    "Parthenon"
+   ],
+   [
+    "Burj Khalifa",
+    "Empire State Building"
+   ],
+   [
+    "Sydney Opera House",
+    "Taj Mahal"
+   ],
+   [
+    "Niagara Falls",
+    "Victoria Falls"
+   ],
+   [
+    "Mount Everest",
+    "K2"
+   ],
+   [
+    "Amazon River",
+    "Nile River"
+   ],
+   [
+    "Sahara Desert",
+    "Thar Desert"
+   ],
+   [
+    "Machu Picchu",
+    "Angkor Wat"
+   ],
+   [
+    "Golden Gate Bridge",
+    "Howrah Bridge"
+   ],
+   [
+    "Louvre Museum",
+    "British Museum"
+   ],
+   [
+    "Grand Canyon",
+    "Great Barrier Reef"
+   ],
+   [
+    "India Gate",
+    "Arc de Triomphe"
+   ],
+   [
+    "Gateway of India",
+    "Charminar"
+   ]
+  ],
+  "worldfood": [
+   [
+    "Sushi",
+    "Sashimi"
+   ],
+   [
+    "Pasta",
+    "Noodles"
+   ],
+   [
+    "Tacos",
+    "Burritos"
+   ],
+   [
+    "Croissant",
+    "Baguette"
+   ],
+   [
+    "Ramen",
+    "Pho"
+   ],
+   [
+    "Hummus",
+    "Falafel"
+   ],
+   [
+    "Kebab",
+    "Shawarma"
+   ],
+   [
+    "Pancake",
+    "Waffle"
+   ],
+   [
+    "Paella",
+    "Risotto"
+   ],
+   [
+    "Dumplings",
+    "Spring Rolls"
+   ],
+   [
+    "Tiramisu",
+    "Cheesecake"
+   ],
+   [
+    "Espresso",
+    "Cappuccino"
+   ],
+   [
+    "Green Tea",
+    "Black Tea"
+   ],
+   [
+    "Chopsticks",
+    "Fork"
+   ],
+   [
+    "Pizza",
+    "Garlic Bread"
+   ]
+  ],
+  "cities": [
+   [
+    "London",
+    "Paris"
+   ],
+   [
+    "New York",
+    "Los Angeles"
+   ],
+   [
+    "Dubai",
+    "Singapore"
+   ],
+   [
+    "Tokyo",
+    "Seoul"
+   ],
+   [
+    "Australia",
+    "New Zealand"
+   ],
+   [
+    "Canada",
+    "Alaska"
+   ],
+   [
+    "Switzerland",
+    "Sweden"
+   ],
+   [
+    "Egypt",
+    "Greece"
+   ],
+   [
+    "Brazil",
+    "Argentina"
+   ],
+   [
+    "Nepal",
+    "Bhutan"
+   ],
+   [
+    "Sri Lanka",
+    "Maldives"
+   ],
+   [
+    "Rome",
+    "Venice"
+   ],
+   [
+    "Hong Kong",
+    "Macau"
+   ],
+   [
+    "Amsterdam",
+    "Brussels"
+   ],
+   [
+    "Kenya",
+    "Tanzania"
+   ]
+  ],
+  "inventions": [
+   [
+    "Telephone",
+    "Telegraph"
+   ],
+   [
+    "Bulb",
+    "Tube Light"
+   ],
+   [
+    "Microscope",
+    "Telescope"
+   ],
+   [
+    "Aeroplane",
+    "Helicopter"
+   ],
+   [
+    "Camera",
+    "Camcorder"
+   ],
+   [
+    "Radio",
+    "Television"
+   ],
+   [
+    "Calculator",
+    "Computer"
+   ],
+   [
+    "Compass",
+    "Map"
+   ],
+   [
+    "Thermometer",
+    "Barometer"
+   ],
+   [
+    "Solar Panel",
+    "Wind Turbine"
+   ],
+   [
+    "Robot",
+    "Drone"
+   ],
+   [
+    "X-Ray",
+    "MRI"
+   ],
+   [
+    "Vaccine",
+    "Antibiotic"
+   ],
+   [
+    "Printing Press",
+    "Typewriter"
+   ]
+  ],
+  "arts": [
+   [
+    "Guitar",
+    "Violin"
+   ],
+   [
+    "Piano",
+    "Keyboard"
+   ],
+   [
+    "Drums",
+    "Tabla"
+   ],
+   [
+    "Painting",
+    "Sculpture"
+   ],
+   [
+    "Opera",
+    "Musical"
+   ],
+   [
+    "Rock",
+    "Pop"
+   ],
+   [
+    "Novel",
+    "Biography"
+   ],
+   [
+    "Poem",
+    "Song"
+   ],
+   [
+    "Museum",
+    "Art Gallery"
+   ],
+   [
+    "Orchestra",
+    "Band"
+   ],
+   [
+    "Flute",
+    "Clarinet"
+   ],
+   [
+    "Sitar",
+    "Guitar"
+   ]
+  ],
+  "space": [
+   [
+    "Moon",
+    "Mars"
+   ],
+   [
+    "Sun",
+    "Star"
+   ],
+   [
+    "Comet",
+    "Asteroid"
+   ],
+   [
+    "Galaxy",
+    "Solar System"
+   ],
+   [
+    "Astronaut",
+    "Pilot"
+   ],
+   [
+    "Black Hole",
+    "Wormhole"
+   ],
+   [
+    "Telescope",
+    "Binoculars"
+   ],
+   [
+    "Eclipse",
+    "Full Moon"
+   ],
+   [
+    "Rocket",
+    "Spaceship"
+   ],
+   [
+    "Satellite",
+    "Space Station"
+   ]
+  ],
+  "street": [
+   [
+    "Vada Pav",
+    "Pav Bhaji"
+   ],
+   [
+    "Chaat",
+    "Pani Puri"
+   ],
+   [
+    "Golgappa",
+    "Dahi Puri"
+   ],
+   [
+    "Momos",
+    "Samosa"
+   ],
+   [
+    "Chai",
+    "Cutting Chai"
+   ],
+   [
+    "Kachori",
+    "Samosa"
+   ],
+   [
+    "Bhutta",
+    "Popcorn"
+   ],
+   [
+    "Maggi",
+    "Pasta"
+   ],
+   [
+    "Paratha",
+    "Puri"
+   ],
+   [
+    "Chole Bhature",
+    "Rajma Chawal"
+   ],
+   [
+    "Kulfi",
+    "Falooda"
+   ],
+   [
+    "Masala Dosa",
+    "Plain Dosa"
+   ],
+   [
+    "Poha",
+    "Upma"
+   ],
+   [
+    "Aloo Tikki",
+    "Cutlet"
+   ],
+   [
+    "Rasam",
+    "Sambar"
+   ]
+  ],
+  "sports": [
+   [
+    "Bat",
+    "Hockey Stick"
+   ],
+   [
+    "Wicket",
+    "Stump"
+   ],
+   [
+    "Umpire",
+    "Referee"
+   ],
+   [
+    "Stadium",
+    "Ground"
+   ],
+   [
+    "Net Practice",
+    "Match"
+   ],
+   [
+    "Yorker",
+    "Bouncer"
+   ],
+   [
+    "Test Match",
+    "T20"
+   ],
+   [
+    "Kabaddi",
+    "Kho-Kho"
+   ],
+   [
+    "Carrom",
+    "Chess"
+   ],
+   [
+    "Gully Cricket",
+    "Box Cricket"
+   ],
+   [
+    "Lagori",
+    "Hide and Seek"
+   ],
+   [
+    "Gilli Danda",
+    "Baseball"
+   ],
+   [
+    "Badminton",
+    "Tennis"
+   ],
+   [
+    "Ludo",
+    "Snakes and Ladders"
+   ],
+   [
+    "Run",
+    "Boundary"
+   ]
+  ],
+  "travel": [
+   [
+    "Railway Platform",
+    "Bus Stand"
+   ],
+   [
+    "Sleeper Class",
+    "AC Coach"
+   ],
+   [
+    "Taj Mahal",
+    "Red Fort"
+   ],
+   [
+    "Goa",
+    "Kerala"
+   ],
+   [
+    "Himalayas",
+    "Western Ghats"
+   ],
+   [
+    "Delhi",
+    "Mumbai"
+   ],
+   [
+    "Ooty",
+    "Munnar"
+   ],
+   [
+    "Jaipur",
+    "Jodhpur"
+   ],
+   [
+    "Local Train",
+    "Metro"
+   ],
+   [
+    "Houseboat",
+    "Shikara"
+   ],
+   [
+    "Rickshaw",
+    "Taxi"
+   ],
+   [
+    "Highway",
+    "Expressway"
+   ],
+   [
+    "Toll Plaza",
+    "Petrol Pump"
+   ],
+   [
+    "Dhaba",
+    "Restaurant"
+   ],
+   [
+    "Chai Stall",
+    "Juice Shop"
+   ]
+  ],
+  "movies": [
+   [
+    "Hero",
+    "Villain"
+   ],
+   [
+    "Interval",
+    "Climax"
+   ],
+   [
+    "Dubbed Film",
+    "Subtitles"
+   ],
+   [
+    "Theatre",
+    "OTT"
+   ],
+   [
+    "Trailer",
+    "Teaser"
+   ],
+   [
+    "Dance Number",
+    "Fight Scene"
+   ],
+   [
+    "Playback Singer",
+    "Music Director"
+   ],
+   [
+    "Remix",
+    "Original Song"
+   ],
+   [
+    "Biopic",
+    "Documentary"
+   ],
+   [
+    "Film Set",
+    "Studio"
+   ],
+   [
+    "Ticket Counter",
+    "Popcorn Stall"
+   ],
+   [
+    "Sequel",
+    "Remake"
+   ],
+   [
+    "Director",
+    "Producer"
+   ],
+   [
+    "Stunt",
+    "Special Effects"
+   ]
+  ],
+  "clothes": [
+   [
+    "Saree",
+    "Lehenga"
+   ],
+   [
+    "Kurta",
+    "Sherwani"
+   ],
+   [
+    "Dhoti",
+    "Lungi"
+   ],
+   [
+    "Chappal",
+    "Sandals"
+   ],
+   [
+    "Sweater",
+    "Shawl"
+   ],
+   [
+    "Jhumka",
+    "Bangle"
+   ],
+   [
+    "Salwar",
+    "Churidar"
+   ],
+   [
+    "Dupatta",
+    "Stole"
+   ],
+   [
+    "Jeans",
+    "Trousers"
+   ],
+   [
+    "School Uniform",
+    "Casuals"
+   ],
+   [
+    "Raincoat",
+    "Umbrella"
+   ],
+   [
+    "Cap",
+    "Helmet"
+   ]
+  ],
+  "tech": [
+   [
+    "UPI",
+    "Net Banking"
+   ],
+   [
+    "QR Code",
+    "Barcode"
+   ],
+   [
+    "Group Chat",
+    "Status"
+   ],
+   [
+    "Reel",
+    "Meme"
+   ],
+   [
+    "Recharge",
+    "Bill Payment"
+   ],
+   [
+    "Wi-Fi",
+    "Mobile Data"
+   ],
+   [
+    "Power Bank",
+    "Charger"
+   ],
+   [
+    "Earphones",
+    "Speaker"
+   ],
+   [
+    "Selfie",
+    "Screenshot"
+   ],
+   [
+    "Password",
+    "OTP"
+   ],
+   [
+    "Food Delivery",
+    "Cab Booking"
+   ],
+   [
+    "Laptop",
+    "Tablet"
+   ],
+   [
+    "Missed Call",
+    "Voicemail"
+   ],
+   [
+    "Online Class",
+    "Recorded Lecture"
+   ]
+  ],
+  "family": [
+   [
+    "Dadi",
+    "Nani"
+   ],
+   [
+    "Chacha",
+    "Mama"
+   ],
+   [
+    "Joint Family",
+    "Nuclear Family"
+   ],
+   [
+    "Mother's Cooking",
+    "Restaurant Food"
+   ],
+   [
+    "Rakhi",
+    "Birthday Gift"
+   ],
+   [
+    "Pocket Money",
+    "Salary"
+   ],
+   [
+    "Wedding Card",
+    "Invitation"
+   ],
+   [
+    "Cousin",
+    "Neighbour"
+   ],
+   [
+    "Pressure Cooker",
+    "Tawa"
+   ],
+   [
+    "Mixer Grinder",
+    "Blender"
+   ],
+   [
+    "Steel Dabba",
+    "Tiffin Box"
+   ],
+   [
+    "Pickle Jar",
+    "Jam Bottle"
+   ],
+   [
+    "Evening Tea",
+    "Morning Walk"
+   ],
+   [
+    "Inverter",
+    "Generator"
+   ],
+   [
+    "Hand Pump",
+    "Tap"
+   ]
+  ],
+  "jobs": [
+   [
+    "Auto Driver",
+    "Taxi Driver"
+   ],
+   [
+    "Chaiwala",
+    "Barista"
+   ],
+   [
+    "Postman",
+    "Courier Boy"
+   ],
+   [
+    "Milkman",
+    "Newspaper Boy"
+   ],
+   [
+    "Tailor",
+    "Cobbler"
+   ],
+   [
+    "Teacher",
+    "Professor"
+   ],
+   [
+    "Engineer",
+    "Architect"
+   ],
+   [
+    "Lawyer",
+    "Judge"
+   ],
+   [
+    "Farmer",
+    "Gardener"
+   ],
+   [
+    "Shopkeeper",
+    "Street Vendor"
+   ],
+   [
+    "Doctor",
+    "Pharmacist"
+   ],
+   [
+    "Bank Clerk",
+    "Cashier"
+   ],
+   [
+    "Tour Guide",
+    "Driver"
+   ],
+   [
+    "Halwai",
+    "Chef"
+   ],
+   [
+    "Police",
+    "Soldier"
+   ]
+  ],
+  "festivals": [
+   [
+    "Republic Day",
+    "Independence Day"
+   ],
+   [
+    "Rangoli",
+    "Mehendi"
+   ],
+   [
+    "Kites",
+    "Balloons"
+   ],
+   [
+    "Fireworks",
+    "Sparklers"
+   ],
+   [
+    "Wedding Procession",
+    "Birthday Party"
+   ],
+   [
+    "Sweets Box",
+    "Gift Hamper"
+   ],
+   [
+    "Garland",
+    "Bouquet"
+   ],
+   [
+    "Dhol",
+    "Tabla"
+   ],
+   [
+    "Bhangra",
+    "Garba"
+   ],
+   [
+    "Fancy Dress",
+    "Costume Party"
+   ],
+   [
+    "Annual Day",
+    "Farewell Day"
+   ],
+   [
+    "Mela",
+    "Exhibition"
+   ],
+   [
+    "Fair",
+    "Carnival"
+   ]
+  ],
+  "nature": [
+   [
+    "Monsoon",
+    "Summer"
+   ],
+   [
+    "Thunder",
+    "Lightning"
+   ],
+   [
+    "Puddle",
+    "River"
+   ],
+   [
+    "Fog",
+    "Smoke"
+   ],
+   [
+    "Flood",
+    "Drought"
+   ],
+   [
+    "Banyan Tree",
+    "Mango Tree"
+   ],
+   [
+    "Lotus",
+    "Rose"
+   ],
+   [
+    "Tiger Reserve",
+    "Zoo"
+   ],
+   [
+    "River",
+    "Canal"
+   ],
+   [
+    "Sunrise",
+    "Sunset"
+   ],
+   [
+    "Rain",
+    "Drizzle"
+   ],
+   [
+    "Winter",
+    "Autumn"
+   ],
+   [
+    "Desert",
+    "Beach"
+   ]
+  ],
+  "campus": [
+   [
+    "Homework",
+    "Assignment"
+   ],
+   [
+    "Exam",
+    "Viva"
+   ],
+   [
+    "Result",
+    "Report Card"
+   ],
+   [
+    "Tuition",
+    "Coaching"
+   ],
+   [
+    "Group Project",
+    "Presentation"
+   ],
+   [
+    "Farewell",
+    "Fresher's Party"
+   ],
+   [
+    "Attendance",
+    "Roll Call"
+   ],
+   [
+    "Hostel Mess",
+    "Canteen"
+   ],
+   [
+    "Tiffin",
+    "Lunch Box"
+   ],
+   [
+    "Backbencher",
+    "Topper"
+   ],
+   [
+    "Library",
+    "Reading Room"
+   ],
+   [
+    "Scholarship",
+    "Fee Waiver"
+   ],
+   [
+    "Internship",
+    "Placement"
+   ],
+   [
+    "Classroom",
+    "Laboratory"
+   ],
+   [
+    "Blackboard",
+    "Whiteboard"
+   ],
+   [
+    "Notebook",
+    "Textbook"
+   ],
+   [
+    "Assembly",
+    "Sports Day"
+   ],
+   [
+    "Principal",
+    "Class Teacher"
+   ],
+   [
+    "Bunking Class",
+    "Late Entry"
+   ],
+   [
+    "Pen Drive",
+    "Hard Disk"
+   ]
+  ],
+  "subjects": [
+   [
+    "Mitosis",
+    "Meiosis"
+   ],
+   [
+    "Acid",
+    "Base"
+   ],
+   [
+    "Speed",
+    "Velocity"
+   ],
+   [
+    "Atom",
+    "Molecule"
+   ],
+   [
+    "Virus",
+    "Bacteria"
+   ],
+   [
+    "Noun",
+    "Pronoun"
+   ],
+   [
+    "Democracy",
+    "Republic"
+   ],
+   [
+    "Weather",
+    "Climate"
+   ],
+   [
+    "Weight",
+    "Mass"
+   ],
+   [
+    "Perimeter",
+    "Area"
+   ],
+   [
+    "Fraction",
+    "Decimal"
+   ],
+   [
+    "Heat",
+    "Temperature"
+   ],
+   [
+    "Volcano",
+    "Earthquake"
+   ],
+   [
+    "Planet",
+    "Star"
+   ],
+   [
+    "Poem",
+    "Story"
+   ],
+   [
+    "Fort",
+    "Palace"
+   ],
+   [
+    "Magnet",
+    "Battery"
+   ],
+   [
+    "Prime Number",
+    "Odd Number"
+   ],
+   [
+    "Photosynthesis",
+    "Respiration"
+   ],
+   [
+    "Simile",
+    "Metaphor"
+   ]
+  ],
+  "food": [
+   [
+    "Tea",
+    "Coffee"
+   ],
+   [
+    "Pizza",
+    "Burger"
+   ],
+   [
+    "Samosa",
+    "Pakora"
+   ],
+   [
+    "Biryani",
+    "Pulao"
+   ],
+   [
+    "Dosa",
+    "Uttapam"
+   ],
+   [
+    "Rasgulla",
+    "Gulab Jamun"
+   ],
+   [
+    "Mango",
+    "Banana"
+   ],
+   [
+    "Roti",
+    "Naan"
+   ],
+   [
+    "Paneer",
+    "Tofu"
+   ],
+   [
+    "Idli",
+    "Dhokla"
+   ],
+   [
+    "Jalebi",
+    "Imarti"
+   ],
+   [
+    "Pani Puri",
+    "Bhel Puri"
+   ],
+   [
+    "Ice Cream",
+    "Kulfi"
+   ],
+   [
+    "Chocolate",
+    "Toffee"
+   ],
+   [
+    "Lassi",
+    "Milkshake"
+   ]
+  ],
+  "places": [
+   [
+    "Beach",
+    "Island"
+   ],
+   [
+    "Airport",
+    "Railway Station"
+   ],
+   [
+    "Hospital",
+    "Clinic"
+   ],
+   [
+    "School",
+    "College"
+   ],
+   [
+    "Mall",
+    "Market"
+   ],
+   [
+    "Library",
+    "Bookstore"
+   ],
+   [
+    "Hill Station",
+    "Desert"
+   ],
+   [
+    "Cinema",
+    "Theatre"
+   ],
+   [
+    "Zoo",
+    "Aquarium"
+   ],
+   [
+    "Park",
+    "Garden"
+   ],
+   [
+    "Hotel",
+    "Hostel"
+   ],
+   [
+    "Bank",
+    "Post Office"
+   ]
+  ],
+  "animals": [
+   [
+    "Lion",
+    "Tiger"
+   ],
+   [
+    "Crow",
+    "Pigeon"
+   ],
+   [
+    "Dog",
+    "Wolf"
+   ],
+   [
+    "Elephant",
+    "Rhino"
+   ],
+   [
+    "Frog",
+    "Toad"
+   ],
+   [
+    "Crocodile",
+    "Alligator"
+   ],
+   [
+    "Peacock",
+    "Parrot"
+   ],
+   [
+    "Horse",
+    "Donkey"
+   ],
+   [
+    "Dolphin",
+    "Shark"
+   ],
+   [
+    "Rabbit",
+    "Squirrel"
+   ],
+   [
+    "Monkey",
+    "Gorilla"
+   ],
+   [
+    "Bee",
+    "Wasp"
+   ]
+  ],
+  "things": [
+   [
+    "Pen",
+    "Pencil"
+   ],
+   [
+    "Fan",
+    "Air Conditioner"
+   ],
+   [
+    "Bike",
+    "Scooter"
+   ],
+   [
+    "Train",
+    "Metro"
+   ],
+   [
+    "Bus",
+    "Auto Rickshaw"
+   ],
+   [
+    "Spoon",
+    "Fork"
+   ],
+   [
+    "Umbrella",
+    "Raincoat"
+   ],
+   [
+    "Mirror",
+    "Window"
+   ],
+   [
+    "Phone",
+    "Tablet"
+   ],
+   [
+    "Watch",
+    "Alarm Clock"
+   ],
+   [
+    "Shirt",
+    "Kurta"
+   ],
+   [
+    "Sofa",
+    "Chair"
+   ],
+   [
+    "Pillow",
+    "Blanket"
+   ],
+   [
+    "Torch",
+    "Candle"
+   ]
+  ],
+  "activities": [
+   [
+    "Cricket",
+    "Football"
+   ],
+   [
+    "Swimming",
+    "Diving"
+   ],
+   [
+    "Singing",
+    "Dancing"
+   ],
+   [
+    "Yoga",
+    "Gym"
+   ],
+   [
+    "Chess",
+    "Ludo"
+   ],
+   [
+    "Cooking",
+    "Baking"
+   ],
+   [
+    "Painting",
+    "Drawing"
+   ],
+   [
+    "Wedding",
+    "Birthday"
+   ],
+   [
+    "Picnic",
+    "Trek"
+   ],
+   [
+    "Exam",
+    "Interview"
+   ],
+   [
+    "Sleeping",
+    "Napping"
+   ],
+   [
+    "Shopping",
+    "Window Shopping"
+   ]
+  ]
+ }
+}
