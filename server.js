@@ -28,19 +28,7 @@ const PUB = path.join(__dirname, "public");
 const MAX_PLAYERS = 12;
 const MIN_PLAYERS = 4;
 const MAX_ROOMS = 1000;
-<<<<<<< HEAD
-const CHAT_KEEP = 80;
-// Optional TURN relay for voice on strict mobile networks. Set TURN_URLS (comma separated), TURN_USER, TURN_PASS.
-const ICE = [{ urls: "stun:stun.l.google.com:19302" }, { urls: "stun:stun1.l.google.com:19302" }];
-if (process.env.TURN_URLS) {
-  ICE.push({
-    urls: process.env.TURN_URLS.split(",").map((x) => x.trim()).filter(Boolean),
-    username: process.env.TURN_USER || "",
-    credential: process.env.TURN_PASS || "",
-  });
-}
-=======
->>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
+
 const ROOM_IDLE_MS = 30 * 60 * 1000;
 
 const MIME = {
