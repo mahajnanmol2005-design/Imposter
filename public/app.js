@@ -9,11 +9,25 @@
     });
   }
 
-  var LS = {
-    get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; },
-    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
-    del: function (k) { try { localStorage.removeItem(k); } catch (e) {} },
-  };
+var LS = {
+  get: function (k) {
+    try {
+      return localStorage.getItem(k);
+    } catch (e) {
+      return null;
+    }
+  },
+  set: function (k, v) {
+    try {
+      localStorage.setItem(k, v);
+    } catch (e) {}
+  },
+  del: function (k) {
+    try {
+      localStorage.removeItem(k);
+    } catch (e) {}
+  },
+};
 
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   var isStandalone = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || navigator.standalone;
