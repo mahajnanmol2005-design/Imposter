@@ -15,16 +15,20 @@ const { WebSocketServer } = require("ws");
 const WORDS = require("./words.json");
 const PAIRS = WORDS.pairs;
 const CAT_IDS = new Set(["mixed", ...Object.keys(PAIRS)]);
+<<<<<<< HEAD
 // Words are pooled per pack. Every round forms a brand new random pair from one pack,
 // so nobody can memorise "word A goes with word B", and words do not repeat within a game.
 const POOLS = {};
 for (const [cat, prs] of Object.entries(PAIRS)) POOLS[cat] = [...new Set(prs.flat())];
+=======
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
 
 const PORT = process.env.PORT || 3000;
 const PUB = path.join(__dirname, "public");
 const MAX_PLAYERS = 12;
 const MIN_PLAYERS = 4;
 const MAX_ROOMS = 1000;
+<<<<<<< HEAD
 const CHAT_KEEP = 80;
 // Optional TURN relay for voice on strict mobile networks. Set TURN_URLS (comma separated), TURN_USER, TURN_PASS.
 const ICE = [{ urls: "stun:stun.l.google.com:19302" }, { urls: "stun:stun1.l.google.com:19302" }];
@@ -35,6 +39,8 @@ if (process.env.TURN_URLS) {
     credential: process.env.TURN_PASS || "",
   });
 }
+=======
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
 const ROOM_IDLE_MS = 30 * 60 * 1000;
 
 const MIME = {
@@ -68,10 +74,13 @@ const server = http.createServer((req, res) => {
     res.writeHead(400).end();
     return;
   }
+<<<<<<< HEAD
   if (p === "/ice") {
     res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" }).end(JSON.stringify({ ice: ICE }));
     return;
   }
+=======
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
   if (p === "/healthz") {
     res.writeHead(200, { "Content-Type": "text/plain" }).end("ok");
     return;
@@ -156,10 +165,13 @@ function makeRoom(code) {
     seen: new Set(),
     result: null,
     emptySince: null,
+<<<<<<< HEAD
     voice: new Map(),
     vseq: 0,
     chat: [],
     cseq: 0,
+=======
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
   };
 }
 
@@ -169,7 +181,11 @@ function addPlayer(room, name, ws) {
   let n = 2;
   const taken = () => [...room.players.values()].some((q) => q.name.toLowerCase() === nm.toLowerCase());
   while (taken()) nm = base.slice(0, 13) + " " + n++;
+<<<<<<< HEAD
   const p = { id: "p" + ++room.seq, token: newToken(), name: nm, ws, score: 0, lastChat: 0 };
+=======
+  const p = { id: "p" + ++room.seq, token: newToken(), name: nm, ws, score: 0 };
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
   room.players.set(p.id, p);
   return p;
 }
@@ -209,7 +225,10 @@ function view(room, p) {
       on: !!q.ws,
       score: q.score,
       inRound: live && room.roundIds.includes(q.id),
+<<<<<<< HEAD
       v: room.voice.get(q.id) || 0,
+=======
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
     })),
   };
   if (v.host) v.cats = WORDS.cats;
@@ -242,6 +261,7 @@ function push(room) {
 }
 
 /* ---------------- game flow ---------------- */
+<<<<<<< HEAD
 function pickPair(room, cats) {
   const sel = cats.includes("mixed") ? Object.keys(POOLS) : cats.filter((c) => POOLS[c]);
   for (let pass = 0; pass < 2; pass++) {
@@ -265,12 +285,26 @@ function pickPair(room, cats) {
   return [pool[0], pool[1]];
 }
 
+=======
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
 function deal(room) {
   const ps = connected(room);
   if (ps.length < MIN_PLAYERS) return false;
   const cats = room.cfg.cats;
+<<<<<<< HEAD
   const pair = pickPair(room, cats);
   const flip = false;
+=======
+  const pool = cats.includes("mixed") ? Object.values(PAIRS).flat() : cats.flatMap((c) => PAIRS[c] || []);
+  let avail = pool.filter((x) => !room.used.has(x.join("|")));
+  if (!avail.length) {
+    room.used.clear();
+    avail = pool;
+  }
+  const pair = avail[crypto.randomInt(avail.length)];
+  room.used.add(pair.join("|"));
+  const flip = crypto.randomInt(2) === 1;
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
   const ids = ps.map((q) => q.id);
   room.rd += 1;
   room.mode = room.cfg.mode;
@@ -323,7 +357,10 @@ function removePlayer(room, id) {
   const p = room.players.get(id);
   if (!p) return;
   room.players.delete(id);
+<<<<<<< HEAD
   room.voice.delete(id);
+=======
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
   if (p.ws) {
     p.ws.ctx = null;
     try {
@@ -391,7 +428,10 @@ function handle(ws, m) {
         } catch {}
       }
       p.ws = ws;
+<<<<<<< HEAD
       room.voice.delete(p.id); // a returning phone must rejoin voice, its old connections are gone
+=======
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
     } else {
       if (ws.ctx) return;
       if (room.players.size >= MAX_PLAYERS) return err(ws, "That game is full.", true);
@@ -402,7 +442,10 @@ function handle(ws, m) {
     const host = room.players.get(room.hostId);
     if (!host || !host.ws) room.hostId = p.id;
     send(ws, { t: "joined", code, token: p.token });
+<<<<<<< HEAD
     send(ws, { t: "chatlog", log: room.chat });
+=======
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
     push(room);
     return;
   }
@@ -415,6 +458,7 @@ function handle(ws, m) {
   const host = room.hostId === p.id;
   const inRound = room.roundIds.includes(p.id);
 
+<<<<<<< HEAD
   if (m.t === "rtc") {
     // Voice setup messages are passed between two phones. The server never sees audio.
     const to = typeof m.to === "string" ? room.players.get(m.to) : null;
@@ -444,6 +488,9 @@ function handle(ws, m) {
     case "vleave":
       if (!room.voice.delete(p.id)) return;
       break;
+=======
+  switch (m.t) {
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
     case "cfg": {
       if (!host || room.phase !== "lobby") return;
       const cfg = validCfg(m);
@@ -548,7 +595,10 @@ function onClose(ws) {
   const p = room.players.get(id);
   if (!p || p.ws !== ws) return;
   p.ws = null;
+<<<<<<< HEAD
   room.voice.delete(id);
+=======
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
   promoteHost(room);
   if (!connected(room).length) room.emptySince = Date.now();
   checkVotes(room);
@@ -556,12 +606,17 @@ function onClose(ws) {
 }
 
 /* ---------------- sockets ---------------- */
+<<<<<<< HEAD
 const wss = new WebSocketServer({ server, path: "/ws", maxPayload: 16384 });
+=======
+const wss = new WebSocketServer({ server, path: "/ws", maxPayload: 2048 });
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
 wss.on("connection", (ws) => {
   ws.isAlive = true;
   ws.ctx = null;
   ws.on("pong", () => (ws.isAlive = true));
   let budget = 30;
+<<<<<<< HEAD
   let rtcBudget = 400; // voice setup sends many small messages in a burst
   let last = Date.now();
   ws.on("message", (raw) => {
@@ -570,6 +625,14 @@ wss.on("connection", (ws) => {
     last = now;
     budget = Math.min(30, budget + dt / 100);
     rtcBudget = Math.min(400, rtcBudget + dt / 25);
+=======
+  let last = Date.now();
+  ws.on("message", (raw) => {
+    const now = Date.now();
+    budget = Math.min(30, budget + (now - last) / 100);
+    last = now;
+    if (--budget < 0) return;
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
     let m;
     try {
       m = JSON.parse(raw);
@@ -577,9 +640,12 @@ wss.on("connection", (ws) => {
       return;
     }
     if (!m || typeof m !== "object" || typeof m.t !== "string") return;
+<<<<<<< HEAD
     if (m.t === "rtc") {
       if (--rtcBudget < 0) return;
     } else if (--budget < 0) return;
+=======
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
     try {
       handle(ws, m);
     } catch (e) {

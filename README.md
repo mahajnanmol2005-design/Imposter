@@ -35,6 +35,7 @@ Both detect Node automatically. Use `npm start` as the start command. The app re
 - Android (Chrome): open the link, tap "Install the app" on the home screen, or the browser menu then Install app.
 - iPhone (Safari): tap Share, then Add to Home Screen.
 
+<<<<<<< HEAD
 ## Words
 Words are not fixed pairs. Every round the server picks two related words at random from the chosen pack, so the group word and odd word are a new combination each game, and no word repeats within a game.
 
@@ -45,6 +46,13 @@ To add words, edit `words.json` (add new entries to a pack's list; related words
 - Voice chat: in Online mode, tap Join voice. Phones talk to each other directly (WebRTC), so no separate call is needed. Use headphones, and mute if you are in the same room as another player. Works well for up to about 8 people.
 - Some mobile networks block direct phone-to-phone audio. If a player cannot hear others, add a free TURN relay: create an account with a TURN provider, then in Render open Environment and add `TURN_URLS` (for example `turn:your.turn.host:443`), `TURN_USER` and `TURN_PASS`. The app picks them up automatically.
 - Voice needs the https link and a browser mic permission. Keep the screen on while talking.
+=======
+## Change the words
+Edit `words.json`. Each pack has pairs like `["Dosa","Idli"]`: the first is the group word, the second the odd word (they are swapped at random each round). Restart the server after editing.
+
+## Voice
+Online mode has a mic button that turns speech into the typed clue (Chrome on Android works best; iPhone Safari support varies, typing always works). Talking live to each other is not built in. Keep a WhatsApp or Meet call open while you play.
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
 
 ## Files
 - `server.js` game rooms and rules (WebSocket at `/ws`)

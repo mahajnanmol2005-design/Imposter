@@ -22,9 +22,13 @@
     name: LS.get("oowl-name") || "", joinCode: "", toast: "",
     show: false, draft: "", pick: [], dstate: "idle", dBase: "", micOff: false,
     prevKey: "", installEvt: null, leaveArm: false, copied: false,
+<<<<<<< HEAD
     chat: [], readN: 0, chatOpen: false, chatDraft: "",
   };
   var V = { on: false, muted: false, stream: null, pcs: {}, ice: [], starting: false };
+=======
+  };
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
 
   try {
     var sess = JSON.parse(LS.get("oowl-sess") || "null");
@@ -64,8 +68,11 @@
     return false;
   }
   function clearSession() {
+<<<<<<< HEAD
     teardownVoice();
     S.chat = []; S.readN = 0; S.chatOpen = false; S.chatDraft = "";
+=======
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
     S.st = null; S.code = null; S.token = null; S.show = false; S.pick = []; S.prevKey = "";
     LS.del("oowl-sess");
   }
@@ -81,7 +88,10 @@
       if (location.search) history.replaceState(null, "", location.pathname);
     } else if (m.t === "state") {
       S.st = m;
+<<<<<<< HEAD
       syncVoice();
+=======
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
       var key = m.phase + ":" + m.rd + ":" + (m.turn || 0);
       if (key !== S.prevKey) {
         var wasMine = false;
@@ -92,6 +102,7 @@
         if (m.phase === "clues" && m.order && m.order[m.turn % m.order.length] === m.me) wasMine = true;
         if (wasMine && navigator.vibrate) navigator.vibrate(200);
       }
+<<<<<<< HEAD
     } else if (m.t === "chatlog") {
       S.chat = m.log || [];
       if (S.chatOpen) markRead();
@@ -103,6 +114,8 @@
     } else if (m.t === "rtc") {
       onRtc(m);
       return;
+=======
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
     } else if (m.t === "err") {
       if (m.fatal) clearSession();
       flash(m.msg);
@@ -149,7 +162,11 @@
   function whoChips(st) {
     return '<div class="who">' + st.players.map(function (p) {
       var kick = st.host && p.id !== st.me && !p.on ? '<button class="x" data-act="kick" data-id="' + esc(p.id) + '" aria-label="Remove ' + esc(p.name) + '">×</button>' : "";
+<<<<<<< HEAD
       return '<span class="' + (p.on ? "" : "off") + (p.v ? " vc" : "") + '">' + esc(p.name) + (p.id === st.hostId ? ' <i class="hb">host</i>' : "") + kick + "</span>";
+=======
+      return '<span class="' + (p.on ? "" : "off") + '">' + esc(p.name) + (p.id === st.hostId ? ' <i class="hb">host</i>' : "") + kick + "</span>";
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
     }).join("") + "</div>";
   }
   function chip(act, v, label, on) {
@@ -226,9 +243,15 @@
     if (mine && online) {
       mine_ui = '<div class="tight"><h2>Your clue</h2>' +
         '<input type="text" id="clue" maxlength="60" value="' + esc(S.draft) + '" placeholder="One word or a short phrase" autocomplete="off" aria-label="Your clue">' +
+<<<<<<< HEAD
         '<div class="row">' + (SR && !S.micOff && !V.on ? '<button class="btn ghost" data-act="mic" id="micbtn">' + micLabel() + "</button>" : "") +
         '<button class="btn" data-act="send">Send clue</button></div>' +
         (V.on ? '<p class="small">You are on voice chat, so type your clue. Everyone can also hear you.</p>' : SR && !S.micOff ? "" : '<p class="small">The mic is not available here. Type your clue.</p>') + "</div>";
+=======
+        '<div class="row">' + (SR && !S.micOff ? '<button class="btn ghost" data-act="mic" id="micbtn">' + micLabel() + "</button>" : "") +
+        '<button class="btn" data-act="send">Send clue</button></div>' +
+        (SR && !S.micOff ? "" : '<p class="small">The mic is not available here. Type your clue.</p>') + "</div>";
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
     } else if (mine) {
       mine_ui = '<button class="btn" data-act="done">I have given my clue</button>';
     }
@@ -339,10 +362,15 @@
   }
 
   function topHtml(st) {
+<<<<<<< HEAD
     var un = unreadCount();
     if (!st) return '<div class="top"><div class="brand">Odd Word Out</div></div>';
     return '<div class="top"><span class="pill">' + esc(st.code) + '</span>' + (st
       ? '<div class="right"><button class="leave" data-act="chat">Chat' + (un ? '<span class="badge">' + (un > 9 ? "9+" : un) + "</span>" : "") + '</button><button class="leave ' + (S.leaveArm ? "armed" : "") + '" data-act="leave">' + (S.leaveArm ? "Tap again to leave" : "Leave") + "</button></div>"
+=======
+    return '<div class="top"><div class="brand">Odd Word Out</div>' + (st
+      ? '<div class="right"><span class="pill">' + esc(st.code) + '</span><button class="leave ' + (S.leaveArm ? "armed" : "") + '" data-act="leave">' + (S.leaveArm ? "Tap again to leave" : "Leave") + "</button></div>"
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
       : "") + "</div>";
   }
 
@@ -350,7 +378,11 @@
   var dirty = false;
   function render() {
     var ae = document.activeElement;
+<<<<<<< HEAD
     if (ae && (ae.id === "nm" || ae.id === "code" || ae.id === "clue" || ae.id === "chatin")) { dirty = true; return; }
+=======
+    if (ae && (ae.id === "nm" || ae.id === "code" || ae.id === "clue")) { dirty = true; return; }
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
     dirty = false;
     draw();
   }
@@ -358,6 +390,7 @@
     var st = S.st;
     var banner = !S.conn ? '<div class="banner" role="status">Reconnecting to the game...</div>' : "";
     var main = st ? gameView(st) : homeView();
+<<<<<<< HEAD
     var box = document.getElementById("msgs");
     var atBottom = !box || box.scrollHeight - box.scrollTop - box.clientHeight < 40;
     var keep = box ? box.scrollTop : 0;
@@ -366,6 +399,9 @@
     document.body.style.overflow = st && S.chatOpen ? "hidden" : "";
     box = document.getElementById("msgs");
     if (box) box.scrollTop = atBottom ? box.scrollHeight : keep;
+=======
+    $app.innerHTML = topHtml(st) + banner + '<div class="view">' + main + "</div>" + (S.toast ? '<div class="toast" role="status">' + esc(S.toast) + "</div>" : "");
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
     if (st) keepAwake();
   }
   document.addEventListener("focusout", function () { if (dirty) setTimeout(render, 80); });
@@ -470,6 +506,7 @@
         render();
         break;
       case "mic": toggleMic(); break;
+<<<<<<< HEAD
       case "chat": S.chatOpen = true; markRead(); render(); break;
       case "chatclose": S.chatOpen = false; markRead(); render(); break;
       case "chatsend": {
@@ -484,6 +521,8 @@
       case "vjoin": joinVoice(); break;
       case "vmute": toggleMute(); break;
       case "vleave": leaveVoice(true); break;
+=======
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
       case "send": {
         var el = document.getElementById("clue");
         var txt = (el ? el.value : S.draft).trim();
@@ -512,8 +551,11 @@
     if (!b || b.disabled) return;
     act(b.dataset.act, b.dataset);
   });
+<<<<<<< HEAD
   // Tapping Send must not close the keyboard.
   $app.addEventListener("mousedown", function (e) { if (e.target.closest("[data-act=chatsend]")) e.preventDefault(); });
+=======
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
   $app.addEventListener("input", function (e) {
     var id = e.target.id;
     if (id === "nm") S.name = e.target.value;
@@ -521,13 +563,17 @@
       e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
       S.joinCode = e.target.value;
     } else if (id === "clue") S.draft = e.target.value;
+<<<<<<< HEAD
     else if (id === "chatin") S.chatDraft = e.target.value;
+=======
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
   });
   $app.addEventListener("keydown", function (e) {
     if (e.key !== "Enter") return;
     var id = e.target.id;
     if (id === "code") { e.preventDefault(); e.target.blur(); act("join"); }
     else if (id === "clue") { e.preventDefault(); act("send"); }
+<<<<<<< HEAD
     else if (id === "chatin") { e.preventDefault(); act("chatsend"); }
     else if (id === "nm") { e.preventDefault(); e.target.blur(); }
   });
@@ -683,6 +729,11 @@
     }
   }
 
+=======
+    else if (id === "nm") { e.preventDefault(); e.target.blur(); }
+  });
+
+>>>>>>> 8071db8ab4a0a4729c7eb99f9315952d78713583
   /* ---------- phone niceties ---------- */
   var wake = null;
   function keepAwake() {
