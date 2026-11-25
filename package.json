@@ -1,0 +1,21 @@
+{
+  "name": "odd-word-out",
+  "version": "1.0.0",
+  "description": "Odd Word Out: multiplayer imposter word game for phones",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "qrcode-generator": "^2.0.4",
+    "ws": "^8.23.0"
+  }
+}
