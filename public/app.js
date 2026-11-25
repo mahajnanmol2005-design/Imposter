@@ -180,7 +180,7 @@ var LS = {
       '<p class="lede">Everyone gets the same secret word except the odd ones out, who share a close cousin of it. Give clues, then vote.</p>' +
       '<div class="tight"><h2>Your name</h2><input type="text" id="nm" maxlength="16" value="' + esc(S.name) + '" placeholder="Nickname" autocomplete="off" aria-label="Your name"></div>' +
       '<button class="btn" data-act="create">Create a game</button>' +
-      '<div class="tight"><h2>Or join a friend</h2><div class="row"><input type="text" id="code" maxlength="4" value="' + esc(S.joinCode) + '" placeholder="CODE" autocomplete="off" autocapitalize="characters" aria-label="Game code"><button class="btn inline" data-act="join">Join</button></div></div>' +
+      '<div class="tight"><h2>Or join a friend</h2><div class="row"><input type="text" id="code" maxlength="4" value="' + esc(S.joinCode) + '" placeholder="CODE" autocomplete="off" autocapitalize="characters" aria-label="Game code" inputmode="text"><button class="btn inline" data-act="join">Join</button></div></div>' +
       (S.installEvt ? '<button class="btn ghost" data-act="install">Install the app</button>' : "") +
       (ios ? '<p class="small">To install on iPhone: tap the Share button, then Add to Home Screen.</p>' : "") +
       "</div>";
@@ -654,15 +654,23 @@ var LS = {
   });
 
   $app.addEventListener("input", function (e) {
-    var id = e.target.id;
-    if (id === "nm") S.name = e.target.value;
-    else if (id === "code") {
-      e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
-      S.joinCode = e.target.value;
-    } else if (id === "clue") S.draft = e.target.value;
-    else if (id === "chatin") S.chatDraft = e.target.value;
-  });
+     var id = e.target.id;
 
+     if (id === "nm") {
+       S.name = e.target.value;
+     } else if (id === "code") {
+       S.joinCode = e.target.value
+         .toUpperCase()
+         .replace(/[^A-Z0-9]/g, "")
+         .slice(0, 5);
+
+       e.target.value = S.joinCode;
+     } else if (id === "clue") {
+       S.draft = e.target.value;
+     } else if (id === "chatin") {
+       S.chatDraft = e.target.value;
+     }
+   });
   $app.addEventListener("keydown", function (e) {
     if (e.key !== "Enter") return;
     var id = e.target.id;
