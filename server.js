@@ -251,7 +251,9 @@ function view(room, viewerId) {
     turn: room.turn,
     clues: room.clues,
     votes: room.votes,
-    seen: room.seen,
+    voted: Object.keys(room.votes),
+    myVotes: room.votes[viewerId] || [],
+    seen: Object.keys(room.seen).filter(id => room.seen[id]),
     result: room.result,
 
     chatCount: room.chatSeq
@@ -263,7 +265,9 @@ function view(room, viewerId) {
     state.score = player.score || 0;
 
     if (room.phase !== "lobby" && room.roundIds.includes(player.id)) {
-      state.role = room.impSet.includes(player.id) ? "imposter" : "civilian";
+      state.role = room.impSet.includes(player.id)
+        ? "imposter"
+        : "civilian";
 
       if (room.seen[player.id]) {
         state.word = room.seen[player.id];
@@ -285,18 +289,12 @@ function push(room) {
   touch(room);
 
   for (const p of room.players) {
-    send(p.ws, {
-      t: "state",
-      s: view(room, p.id)
-    });
+    send(p.ws, Object.assign({ t: "state" }, view(room, p.id)));
   }
 }
 
 function errorTo(ws, message) {
-  send(ws, {
-    t: "err",
-    m: safeText(message, 300)
-  });
+  send(ws, { t: "err", msg: safeText(message, 300) });
 }
 
 function sendJoined(ws, room, player) {
@@ -307,10 +305,7 @@ function sendJoined(ws, room, player) {
     token: player.token
   });
 
-  send(ws, {
-    t: "state",
-    s: view(room, player.id)
-  });
+  send(ws, Object.assign({ t: "state" }, view(room, player.id)));
 
   send(ws, {
     t: "chatlog",
@@ -367,8 +362,8 @@ function removePlayer(room, player, disconnect = false) {
   delete room.votes[player.id];
 
   for (const key of Object.keys(room.votes)) {
-    if (room.votes[key] === player.id) {
-      delete room.votes[key];
+    if (Array.isArray(room.votes[key])) {
+      room.votes[key] = room.votes[key].filter(id => id !== player.id);
     }
   }
 
@@ -382,7 +377,7 @@ function removePlayer(room, player, disconnect = false) {
   }
 
   if (room.phase === "clues") {
-    if (room.turn >= room.order.length) {
+    if (room.turn >= room.order.length * room.rounds) {
       startVote(room);
     }
   }
@@ -413,7 +408,7 @@ function resetRound(room) {
 function startGame(room) {
   const players = connectedPlayers(room);
 
-  if (players.length < 3) {
+  if (players.length < 4) {
     return false;
   }
 
@@ -458,7 +453,7 @@ function startGame(room) {
       : room.civ;
   }
 
-  room.phase = "clues";
+  room.phase = "deal";
 
   touch(room);
   push(room);
@@ -469,7 +464,7 @@ function startGame(room) {
 function startVote(room) {
   room.phase = "vote";
   room.votes = {};
-  room.turn = room.order.length;
+  room.turn = 0;
   touch(room);
   push(room);
 }
@@ -478,10 +473,10 @@ function countVotes(room) {
   const counts = {};
 
   for (const voter of room.roundIds) {
-    const votedFor = room.votes[voter];
+    const picks = room.votes[voter] || [];
 
-    if (votedFor && room.roundIds.includes(votedFor)) {
-      counts[votedFor] = (counts[votedFor] || 0) + 1;
+    for (const target of picks) {
+      counts[target] = (counts[target] || 0) + 1;
     }
   }
 
@@ -490,48 +485,41 @@ function countVotes(room) {
 
 function finishVote(room) {
   const counts = countVotes(room);
-  let max = 0;
-  let selected = [];
 
-  for (const id of room.roundIds) {
-    const n = counts[id] || 0;
+  const ranked = room.roundIds
+    .map(id => [id, counts[id] || 0])
+    .sort((a, b) => b[1] - a[1]);
 
-    if (n > max) {
-      max = n;
-      selected = [id];
-    } else if (n === max && n > 0) {
-      selected.push(id);
-    }
-  }
+  const top = ranked.length ? ranked[0][1] : 0;
 
-  let caught = selected.length === 1 ? selected[0] : null;
-  const caughtImposter = caught && room.impSet.includes(caught);
+  const acc = ranked
+    .filter(x => x[1] === top && top > 0)
+    .map(x => x[0]);
 
-  const result = {
-    votes: counts,
-    caught,
-    caughtImposter: !!caughtImposter,
-    tie: selected.length > 1,
-    selected
-  };
+  const caughtImps = acc.filter(id => room.impSet.includes(id));
+  const caught = caughtImps.length > 0;
 
-  if (caughtImposter) {
-    for (const p of room.players) {
-      if (!room.impSet.includes(p.id)) {
-        p.score = (p.score || 0) + 1;
-      }
-    }
-  } else {
+  let oc = caught ? "ask" : "escape";
+
+  if (!caught) {
     for (const p of room.players) {
       if (room.impSet.includes(p.id)) {
-        p.score = (p.score || 0) + 1;
+        p.score = (p.score || 0) + 3;
       }
     }
   }
 
-  room.result = result;
-  room.phase = "result";
+  room.result = {
+    oc,
+    imps: room.impSet.slice(),
+    acc,
+    tally: counts,
+    civ: room.civ,
+    imp: room.imp,
+    guessCorrect: null
+  };
 
+  room.phase = "result";
   touch(room);
   push(room);
 }
@@ -541,16 +529,13 @@ function checkVotes(room) {
 
   const active = room.roundIds.filter(id => getPlayer(room, id));
 
-  if (active.length === 0) {
-    room.phase = "result";
-    room.result = { caught: null, caughtImposter: false };
-    push(room);
-    return;
-  }
-
-  const voted = active.filter(id => room.votes[id]);
-
-  if (voted.length >= active.length) {
+  if (
+    active.length &&
+    active.every(id =>
+      Array.isArray(room.votes[id]) &&
+      room.votes[id].length === room.k
+    )
+  ) {
     finishVote(room);
   }
 }
@@ -568,7 +553,7 @@ function advance(room) {
 
   const players = connectedPlayers(room);
 
-  if (players.length < 3) {
+  if (players.length < 4) {
     resetRound(room);
     push(room);
     return;
@@ -605,7 +590,7 @@ function advance(room) {
       : room.civ;
   }
 
-  room.phase = "clues";
+  room.phase = "deal";
 
   touch(room);
   push(room);
@@ -665,11 +650,10 @@ function handleRTC(room, player, message) {
   if (!message.d || typeof message.d !== "object") return;
 
   const data = message.d;
-
   const relay = {};
 
   if (data.c) relay.c = data.c;
-  if (data.s) relay.s = data.s;
+  if (data.o) relay.o = data.o;
   if (data.a) relay.a = data.a;
 
   if (!Object.keys(relay).length) return;
@@ -710,17 +694,24 @@ function handle(room, player, message) {
     case "cfg": {
       if (room.hostId !== player.id) return;
       if (room.phase !== "lobby") return;
-      if (!validCfg(message.cfg)) {
+
+      const cfg = {
+        cats: message.cats,
+        imps: message.imps,
+        rounds: message.rounds,
+        mode: message.mode
+      };
+
+      if (!validCfg(cfg)) {
         errorTo(player.ws, "Invalid settings");
         return;
       }
-
-      const cfg = message.cfg;
 
       room.cfg = {
         cats: Array.isArray(cfg.cats) && cfg.cats.length
           ? cfg.cats.slice(0, 50).map(x => safeText(x, 60))
           : ["mixed"],
+
         imps: Math.max(1, Math.min(10, Number(cfg.imps) || 1)),
         rounds: Math.max(1, Math.min(20, Number(cfg.rounds) || 1)),
         mode: safeText(cfg.mode, 30) || "f2f"
@@ -734,7 +725,7 @@ function handle(room, player, message) {
       if (room.hostId !== player.id) return;
 
       if (!startGame(room)) {
-        errorTo(player.ws, "At least 3 online players are required.");
+        errorTo(player.ws, "At least 4 online players are required.");
       }
 
       break;
@@ -743,21 +734,15 @@ function handle(room, player, message) {
     case "seen":
       if (room.phase !== "deal") return;
       if (!room.roundIds.includes(player.id)) return;
-
-      room.phase = "clues";
       push(room);
       break;
 
     case "clues":
-      if (room.phase !== "clues") return;
-      if (room.turn >= room.order.length) return;
+      if (room.hostId !== player.id || room.phase !== "deal") return;
 
-      room.turn++;
+      room.phase = "clues";
+      room.turn = 0;
       push(room);
-
-      if (room.turn >= room.order.length) {
-        startVote(room);
-      }
       break;
 
     case "clue": {
@@ -768,48 +753,63 @@ function handle(room, player, message) {
 
       if (!text) return;
 
-      const existing = room.clues.find(c => c.id === player.id);
+      const n = room.order.length;
+      const currentId = room.order[room.turn % n];
 
-      if (existing) {
-        existing.text = text;
+      if (currentId !== player.id) return;
+
+      room.clues.push({
+        id: player.id,
+        name: player.name,
+        text,
+        round: Math.floor(room.turn / n) + 1
+      });
+
+      room.turn++;
+
+      if (room.turn >= n * room.rounds) {
+        startVote(room);
       } else {
-        room.clues.push({
-          id: player.id,
-          name: player.name,
-          text
-        });
+        push(room);
       }
 
-      push(room);
       break;
     }
 
     case "done":
-      if (room.phase !== "clues") return;
-      if (room.turn >= room.order.length) return;
+      if (
+        room.phase !== "clues" ||
+        room.turn >= room.order.length * room.rounds
+      ) return;
+
+      if (room.order[room.turn % room.order.length] !== player.id) return;
 
       room.turn++;
-      push(room);
 
-      if (room.turn >= room.order.length) {
+      if (room.turn >= room.order.length * room.rounds) {
         startVote(room);
+      } else {
+        push(room);
       }
+
       break;
 
     case "skip":
-      if (room.phase !== "clues") return;
-      if (room.turn >= room.order.length) return;
+      if (room.phase !== "clues" || room.hostId !== player.id) return;
+      if (room.turn >= room.order.length * room.rounds) return;
 
       room.turn++;
-      push(room);
 
-      if (room.turn >= room.order.length) {
+      if (room.turn >= room.order.length * room.rounds) {
         startVote(room);
+      } else {
+        push(room);
       }
+
       break;
 
     case "tovote":
-      if (room.phase === "clues") {
+      if (room.hostId === player.id && room.phase === "clues") {
         startVote(room);
       }
       break;
@@ -817,12 +817,23 @@ function handle(room, player, message) {
     case "vote": {
       if (room.phase !== "vote") return;
 
-      const targetId = safeText(message.to || message.id, 100);
+      const picks = Array.isArray(message.picks)
+        ? message.picks.slice(0, room.k).map(x => safeText(x, 100))
+        : [];
 
-      if (!room.roundIds.includes(targetId)) return;
-      if (targetId === player.id) return;
+      if (picks.length !== room.k) return;
+      if (new Set(picks).size !== picks.length) return;
 
-      room.votes[player.id] = targetId;
+      if (
+        picks.some(id =>
+          !room.roundIds.includes(id) ||
+          id === player.id
+        )
+      ) return;
+
+      if (room.votes[player.id]) return;
+
+      room.votes[player.id] = picks;
 
       push(room);
       checkVotes(room);
@@ -839,26 +850,31 @@ function handle(room, player, message) {
       break;
 
     case "guess":
-      if (room.phase !== "result") return;
+      if (room.phase !== "result" || room.result.oc !== "ask") return;
       if (!room.impSet.includes(player.id)) return;
 
-      const guess = safeText(message.word || message.guess, 100);
-
-      if (guess && guess.toLowerCase() === room.civ.toLowerCase()) {
+      if (message.ok === true) {
         for (const id of room.impSet) {
           const p = getPlayer(room, id);
-          if (p) p.score = (p.score || 0) + 2;
+
+          if (p) {
+            p.score = (p.score || 0) + 2;
+          }
         }
 
-        room.result = room.result || {};
-        room.result.guessCorrect = true;
-        push(room);
+        room.result.oc = "steal";
       } else {
-        room.result = room.result || {};
-        room.result.guessCorrect = false;
-        push(room);
+        for (const p of room.players) {
+          if (!room.impSet.includes(p.id)) {
+            p.score = (p.score || 0) + 1;
+          }
+        }
+
+        room.result.oc = "group";
       }
 
+      room.result.guessCorrect = message.ok === true;
+      push(room);
       break;
 
     case "lobby":
@@ -1129,8 +1145,10 @@ const server = http.createServer((req, res) => {
 
   const resolved = path.resolve(filePath);
 
-  if (!resolved.startsWith(path.resolve(PUBLIC) + path.sep) &&
-      resolved !== path.resolve(PUBLIC, "index.html")) {
+  if (
+    !resolved.startsWith(path.resolve(PUBLIC) + path.sep) &&
+    resolved !== path.resolve(PUBLIC, "index.html")
+  ) {
     res.writeHead(403);
     res.end("Forbidden");
     return;
@@ -1200,7 +1218,10 @@ const cleanup = setInterval(() => {
   for (const [code, room] of rooms) {
     const online = connectedPlayers(room);
 
-    if (online.length === 0 && now - room.lastActivity > ROOM_IDLE_MS) {
+    if (
+      online.length === 0 &&
+      now - room.lastActivity > ROOM_IDLE_MS
+    ) {
       rooms.delete(code);
     }
   }
