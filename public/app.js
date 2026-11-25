@@ -732,22 +732,87 @@ var LS = {
       '<button class="btn ghost inline" data-act="vmute">' + (V.muted ? "Unmute" : "Mute") + '</button><button class="btn ghost inline" data-act="vleave">Leave</button></div>';
   }
 
-  function joinVoice() {
-    if (V.on || V.starting) return;
-    if (!voiceSupported()) return flash("Voice chat needs the https link and a newer browser.");
+  async function joinVoice() {
+    if (V.on) return;
 
-    V.starting = true; render();
+    if (!navigator.mediaDevices?.getUserMedia) {
+      alert("Microphone is not supported by this browser. Use HTTPS and a modern browser.");
+      return;
+    }
 
-    Promise.all([
-      navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }),
-      fetch("/ice").then(function (r) { return r.json(); }).then(function (j) { return j.ice; }).catch(function () { return [{ urls: "stun:stun.l.google.com:19302" }]; }),
-    ]).then(function (r) {
-      V.stream = r[0]; V.ice = r[1]; V.on = true; V.muted = false; V.starting = false;
-      send({ t: "vjoin" }, true); render();
-    }).catch(function (e) {
-      V.starting = false; render();
-      flash(e && e.name === "NotAllowedError" ? "Mic permission was blocked. Allow the mic for this site to talk." : "Could not start the mic.");
-    });
+    try {
+      let stream;
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          },
+          video: false
+        });
+      } catch (firstError) {
+        console.warn("Retrying with basic microphone settings", firstError);
+
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: false
+        });
+      }
+
+      V.stream = stream;
+
+      try {
+        const response = await fetch("/ice", {
+          cache: "no-store"
+        });
+
+        if (!response.ok) throw new Error("ICE endpoint failed");
+
+        const data = await response.json();
+
+        V.ice = Array.isArray(data.ice) && data.ice.length
+          ? data.ice
+          : [{ urls: "stun:stun.l.google.com:19302" }];
+
+      } catch (err) {
+        console.warn("ICE fallback:", err);
+
+        V.ice = [
+          { urls: "stun:stun.l.google.com:19302" },
+          { urls: "stun:stun1.l.google.com:19302" }
+        ];
+      }
+
+      V.on = true;
+
+      send({ t: "vjoin" });
+
+      syncVoice();
+      render();
+
+    } catch (err) {
+      V.on = false;
+
+      if (V.stream) {
+        V.stream.getTracks().forEach(track => track.stop());
+      }
+
+      V.stream = null;
+
+      if (err.name === "NotAllowedError") {
+        alert("Microphone permission denied. Allow microphone access in browser settings.");
+      } else if (err.name === "NotFoundError") {
+        alert("No microphone found.");
+      } else if (err.name === "NotReadableError") {
+        alert("The microphone is already being used by another application.");
+      } else {
+        alert("Microphone error: " + err.message);
+      }
+
+      console.error(err);
+    }
   }
 
   function closePc(id) {
@@ -776,38 +841,77 @@ var LS = {
     render();
   }
 
-  function mkPc(id, v, myV) {
-    var pc = new RTCPeerConnection({ iceServers: V.ice });
-    var e = { pc: pc, v: v, myV: myV, q: [], audio: null, state: "connecting", warned: false };
-    V.pcs[id] = e;
+  function mkPc(id) {
+    if (V.pcs[id]) return V.pcs[id];
 
-    V.stream.getTracks().forEach(function (t) { pc.addTrack(t, V.stream); });
+    const pc = new RTCPeerConnection({
+      iceServers: V.ice || [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" }
+      ]
+    });
 
-    pc.onicecandidate = function (ev) {
-      if (ev.candidate) send({ t: "rtc", to: id, d: { c: ev.candidate.toJSON() } }, true);
-    };
+    V.pcs[id] = pc;
 
-    pc.ontrack = function (ev) {
-      var a = e.audio;
-      if (!a) {
-        a = document.createElement("audio");
-        a.autoplay = true; a.setAttribute("playsinline", "");
-        document.getElementById("vaudio").appendChild(a);
-        e.audio = a;
+    if (V.stream) {
+      V.stream.getAudioTracks().forEach(track => {
+        pc.addTrack(track, V.stream);
+      });
+    }
+
+    pc.ontrack = async event => {
+      let audio = document.getElementById("audio-" + id);
+
+      if (!audio) {
+        audio = document.createElement("audio");
+        audio.id = "audio-" + id;
+        audio.autoplay = true;
+        audio.playsInline = true;
+        audio.setAttribute("playsinline", "");
+        audio.setAttribute("autoplay", "");
+
+        const container = document.getElementById("vaudio");
+        if (container) container.appendChild(audio);
       }
-      a.srcObject = ev.streams[0];
-      var pr = a.play(); if (pr && pr.catch) pr.catch(function () {});
+
+      if (event.streams && event.streams.length) {
+        audio.srcObject = event.streams[0];
+      } else {
+        if (!(audio.srcObject instanceof MediaStream)) {
+          audio.srcObject = new MediaStream();
+        }
+        audio.srcObject.addTrack(event.track);
+      }
+
+      audio.muted = false;
+      audio.volume = 1;
+
+      try {
+        await audio.play();
+      } catch (err) {
+        console.warn("Audio playback blocked:", err);
+      }
     };
 
-    pc.onconnectionstatechange = function () {
-      e.state = pc.connectionState;
-      if (e.state === "failed" && !e.warned && S.st) {
-        e.warned = true;
-        flash("Voice could not connect with " + nm(S.st, id) + ". Their network may block it.");
-      } else render();
+    pc.onicecandidate = event => {
+      if (event.candidate) {
+        send({
+          t: "rtc",
+          to: id,
+          d: { c: event.candidate }
+        });
+      }
     };
 
-    return e;
+    pc.onconnectionstatechange = () => {
+      console.log("Peer:", id, pc.connectionState);
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      console.log("ICE:", id, pc.iceConnectionState);
+    };
+
+    return pc;
   }
 
   function flushQ(e) {

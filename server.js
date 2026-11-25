@@ -1,10 +1,4 @@
-
 "use strict";
-
-/*
- * Odd Word Out server
- * HTTP static files + WebSocket game rooms, chat and WebRTC signaling.
- */
 
 const http = require("http");
 const fs = require("fs");
@@ -12,378 +6,275 @@ const path = require("path");
 const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
 
-const WORDS = require("./words.json");
-const PAIRS = WORDS.pairs || {};
-const CAT_IDS = new Set(["mixed", ...Object.keys(PAIRS)]);
+const PORT = Number(process.env.PORT || 3000);
+const ROOT = __dirname;
+const PUBLIC = path.join(ROOT, "public");
+const WORDS_FILE = path.join(ROOT, "words.json");
 
-const PORT = process.env.PORT || 3000;
-const PUB = path.join(__dirname, "public");
-
-const MAX_PLAYERS = 12;
-const MIN_PLAYERS = 4;
+const MAX_PLAYERS = 20;
 const MAX_ROOMS = 1000;
-const ROOM_IDLE_MS = 30 * 60 * 1000;
 const MAX_CHAT = 80;
+const ROOM_IDLE_MS = 30 * 60 * 1000;
+const MAX_MESSAGE = 64 * 1024;
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
-  ".json": "application/json",
+  ".js": "application/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
   ".webmanifest": "application/manifest+json",
   ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
   ".svg": "image/svg+xml",
+  ".ico": "image/x-icon",
+  ".webp": "image/webp",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+  ".ttf": "font/ttf"
 };
 
-const CSP = [
-  "default-src 'self'",
-  "script-src 'self'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com",
-  "img-src 'self' data:",
-  "connect-src 'self' ws: wss:",
-  "media-src 'self' blob:",
-  "manifest-src 'self'",
-  "base-uri 'none'",
-  "form-action 'none'",
-  "frame-ancestors 'none'",
-].join("; ");
-
 const rooms = new Map();
-const LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ";
 
-/* ---------------- HTTP server ---------------- */
+function randomId() {
+  return crypto.randomBytes(12).toString("hex");
+}
 
-const server = http.createServer((req, res) => {
-  let pathname;
+function randomCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+
+  for (let i = 0; i < 5; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+
+  return code;
+}
+
+function safeText(value, max = 120) {
+  return String(value ?? "")
+    .replace(/[\u0000-\u001F\u007F]/g, "")
+    .trim()
+    .slice(0, max);
+}
+
+function send(ws, data) {
+  if (!ws || ws.readyState !== 1) return;
 
   try {
-    pathname = decodeURIComponent(
-      new URL(req.url, "http://localhost").pathname
-    );
-  } catch {
-    res.writeHead(400).end("Bad request");
-    return;
+    ws.send(JSON.stringify(data));
+  } catch (err) {
+    console.error("WebSocket send error:", err.message);
   }
+}
 
-  if (pathname === "/healthz") {
-    res.writeHead(200, {
-      "Content-Type": "text/plain",
-      "Cache-Control": "no-store",
-    });
-    res.end("ok");
-    return;
+function broadcast(room, data) {
+  for (const p of room.players) {
+    send(p.ws, data);
   }
+}
 
-  // STUN configuration for the existing frontend.
-  if (pathname === "/ice") {
-    res.writeHead(200, {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store",
-      "Access-Control-Allow-Origin": "self",
-    });
+function getPlayer(room, id) {
+  return room.players.find(p => p.id === id);
+}
 
-    res.end(JSON.stringify({
-      ice: [
-        { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun1.l.google.com:19302" },
-      ],
-    }));
-    return;
-  }
+function getByToken(room, token) {
+  return room.players.find(p => p.token === token);
+}
 
-  if (pathname === "/") pathname = "/index.html";
+function connectedPlayers(room) {
+  return room.players.filter(p => p.ws && p.ws.readyState === 1);
+}
 
-  const file = path.resolve(PUB, "." + pathname);
+function loadWords() {
+  try {
+    const raw = fs.readFileSync(WORDS_FILE, "utf8");
+    const data = JSON.parse(raw);
 
-  if (file !== PUB && !file.startsWith(PUB + path.sep)) {
-    res.writeHead(403).end("Forbidden");
-    return;
-  }
-
-  fs.readFile(file, (error, data) => {
-    if (error) {
-      res.writeHead(404, {
-        "Content-Type": "text/plain; charset=utf-8",
-      });
-      res.end("Not found");
-      return;
+    if (!data || !Array.isArray(data.cats) || !data.pairs) {
+      throw new Error("Invalid words.json structure");
     }
 
-    const revalidate = [
-      "/sw.js",
-      "/index.html",
-      "/app.js",
-      "/style.css",
-    ].includes(pathname);
+    return data;
+  } catch (err) {
+    console.error("Could not load words.json:", err.message);
+    return { cats: [["mixed", "Mixed"]], pairs: {} };
+  }
+}
 
-    res.writeHead(200, {
-      "Content-Type":
-        MIME[path.extname(file)] || "application/octet-stream",
-      "Cache-Control": revalidate ? "no-cache" : "public, max-age=3600",
-      "Content-Security-Policy": CSP,
-      "X-Content-Type-Options": "nosniff",
-      "Referrer-Policy": "no-referrer",
-    });
+const WORDS = loadWords();
 
-    res.end(data);
-  });
-});
+function validCfg(cfg) {
+  if (!cfg || typeof cfg !== "object") return false;
 
-/* ---------------- helpers ---------------- */
+  const cats = Array.isArray(cfg.cats) ? cfg.cats : ["mixed"];
 
-function newCode() {
-  for (let i = 0; i < 60; i++) {
-    let code = "";
+  return (
+    cats.length > 0 &&
+    cats.length <= 50 &&
+    Number.isInteger(Number(cfg.imps)) &&
+    Number(cfg.imps) >= 1 &&
+    Number(cfg.imps) <= 10 &&
+    Number.isInteger(Number(cfg.rounds)) &&
+    Number(cfg.rounds) >= 1 &&
+    Number(cfg.rounds) <= 20 &&
+    typeof cfg.mode === "string"
+  );
+}
 
-    for (let j = 0; j < 4; j++) {
-      code += LETTERS[crypto.randomInt(LETTERS.length)];
+function getPairs(category) {
+  const pairs = WORDS.pairs[category];
+
+  if (!Array.isArray(pairs)) return [];
+
+  return pairs.filter(pair =>
+    Array.isArray(pair) &&
+    pair.length >= 2 &&
+    pair[0] != null &&
+    pair[1] != null
+  );
+}
+
+function chooseWordPair(room) {
+  let cats = Array.isArray(room.cfg.cats)
+    ? room.cfg.cats
+    : ["mixed"];
+
+  if (!cats.length) cats = ["mixed"];
+
+  let all = [];
+
+  if (cats.includes("mixed")) {
+    for (const category of Object.keys(WORDS.pairs)) {
+      all = all.concat(getPairs(category));
     }
-
-    if (!rooms.has(code)) return code;
-  }
-
-  return null;
-}
-
-function newToken() {
-  return crypto.randomBytes(16).toString("hex");
-}
-
-function shuffle(array) {
-  const result = [...array];
-
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = crypto.randomInt(i + 1);
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-
-  return result;
-}
-
-function cleanName(value) {
-  const name = String(value == null ? "" : value)
-    .replace(/[\u0000-\u001f\u007f<>]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 16);
-
-  return name || "Player";
-}
-
-function cleanChat(value) {
-  return String(value == null ? "" : value)
-    .replace(/[\u0000-\u001f\u007f<>]/g, "")
-    .trim()
-    .slice(0, 200);
-}
-
-function send(ws, message) {
-  if (ws && ws.readyState === 1) {
-    ws.send(JSON.stringify(message));
-  }
-}
-
-function broadcast(room, message, exceptId) {
-  for (const player of room.players.values()) {
-    if (player.id !== exceptId && player.ws) {
-      send(player.ws, message);
+  } else {
+    for (const category of cats) {
+      all = all.concat(getPairs(category));
     }
   }
+
+  if (!all.length) {
+    all = getPairs("mixed");
+  }
+
+  if (!all.length) {
+    for (const category of Object.keys(WORDS.pairs)) {
+      all = all.concat(getPairs(category));
+    }
+  }
+
+  if (!all.length) {
+    return ["Apple", "Orange"];
+  }
+
+  return all[Math.floor(Math.random() * all.length)];
 }
 
-function makeRoom(code) {
-  return {
+function createRoom(host) {
+  let code;
+
+  do {
+    code = randomCode();
+  } while (rooms.has(code));
+
+  const room = {
     code,
-    hostId: null,
-    players: new Map(),
-
-    seq: 0,
-    voiceSeq: 0,
-    chat: [],
+    hostId: host.id,
+    players: [host],
 
     cfg: {
       cats: ["mixed"],
       imps: 2,
       rounds: 2,
-      mode: "f2f",
+      mode: "f2f"
     },
 
-    used: new Set(),
     phase: "lobby",
     rd: 0,
     mode: "f2f",
     rounds: 2,
-    k: 1,
+    k: 0,
     civ: "",
     imp: "",
     roundIds: [],
-    impSet: new Set(),
+    impSet: [],
     order: [],
     turn: 0,
     clues: [],
-    votes: new Map(),
-    seen: new Set(),
+    votes: {},
+    seen: {},
     result: null,
-    emptySince: null,
-  };
-}
 
-function addPlayer(room, name, ws) {
-  const base = cleanName(name);
-  let playerName = base;
-  let number = 2;
+    chat: [],
+    chatSeq: 0,
+    voiceSeq: 0,
 
-  const taken = () =>
-    [...room.players.values()].some(
-      (p) => p.name.toLowerCase() === playerName.toLowerCase()
-    );
-
-  while (taken()) {
-    playerName = base.slice(0, 13) + " " + number++;
-  }
-
-  const player = {
-    id: newToken(),
-    token: newToken(),
-    name: playerName,
-    ws,
-    score: 0,
-    v: 0,
+    lastActivity: Date.now()
   };
 
-  room.players.set(player.id, player);
-  return player;
+  rooms.set(code, room);
+
+  return room;
 }
 
-function connected(room) {
-  return [...room.players.values()].filter((p) => p.ws);
+function touch(room) {
+  room.lastActivity = Date.now();
 }
 
-function promoteHost(room) {
-  const current = room.players.get(room.hostId);
+function view(room, viewerId) {
+  const player = getPlayer(room, viewerId);
 
-  if (current && current.ws) return;
-
-  const next = connected(room)[0];
-  room.hostId = next ? next.id : null;
-}
-
-function addScore(room, ids, amount) {
-  for (const id of ids) {
-    const player = room.players.get(id);
-    if (player) player.score += amount;
-  }
-}
-
-/* ---------------- word selection ---------------- */
-
-function pickPair(room) {
-  let categories = room.cfg.cats;
-
-  if (categories.includes("mixed")) {
-    categories = Object.keys(PAIRS);
-  }
-
-  let options = [];
-
-  for (const category of categories) {
-    const pairs = PAIRS[category];
-
-    if (!Array.isArray(pairs)) continue;
-
-    pairs.forEach((pair, index) => {
-      if (!room.used.has(`${category}:${index}`)) {
-        options.push({
-          pair,
-          key: `${category}:${index}`,
-        });
-      }
-    });
-  }
-
-  if (!options.length) {
-    room.used.clear();
-
-    for (const category of categories) {
-      const pairs = PAIRS[category];
-
-      if (!Array.isArray(pairs)) continue;
-
-      pairs.forEach((pair, index) => {
-        options.push({
-          pair,
-          key: `${category}:${index}`,
-        });
-      });
-    }
-  }
-
-  if (!options.length) return null;
-
-  const selected = options[crypto.randomInt(options.length)];
-  room.used.add(selected.key);
-
-  return selected.pair;
-}
-
-/* ---------------- player state ---------------- */
-
-function view(room, player) {
-  const live = room.phase !== "lobby";
-  const inRound = live && room.roundIds.includes(player.id);
+  const players = room.players.map(p => ({
+    id: p.id,
+    name: p.name,
+    on: !!(p.ws && p.ws.readyState === 1),
+    score: p.score || 0,
+    inRound: room.roundIds.includes(p.id),
+    v: p.v || 0
+  }));
 
   const state = {
-    t: "state",
     code: room.code,
-    me: player.id,
+    host: room.hostId,
     hostId: room.hostId,
-    host: room.hostId === player.id,
-    phase: room.phase,
-    rd: room.rd,
+    players,
     cfg: room.cfg,
 
-    players: [...room.players.values()].map((p) => ({
-      id: p.id,
-      name: p.name,
-      on: !!p.ws,
-      score: p.score,
-      v: p.ws ? p.v : 0,
-      inRound: live && room.roundIds.includes(p.id),
-    })),
+    phase: room.phase,
+    rd: room.rd,
+    mode: room.mode,
+    rounds: room.rounds,
+    k: room.k,
+
+    order: room.order,
+    turn: room.turn,
+    clues: room.clues,
+    votes: room.votes,
+    seen: room.seen,
+    result: room.result,
+
+    chatCount: room.chatSeq
   };
 
-  if (state.host) state.cats = WORDS.cats;
+  if (player) {
+    state.me = player.id;
+    state.id = player.id;
+    state.score = player.score || 0;
 
-  if (live) {
-    state.k = room.k;
-    state.rounds = room.rounds;
-    state.mode = room.mode;
-    state.order = room.order;
-    state.turn = room.turn;
-    state.clues = room.clues;
-    state.seen = [...room.seen];
-    state.voted = [...room.votes.keys()];
-    state.myVotes = room.votes.get(player.id) || [];
+    if (room.phase !== "lobby" && room.roundIds.includes(player.id)) {
+      state.role = room.impSet.includes(player.id) ? "imposter" : "civilian";
 
-    if (inRound && room.phase !== "result") {
-      state.word = room.impSet.has(player.id) ? room.imp : room.civ;
+      if (room.seen[player.id]) {
+        state.word = room.seen[player.id];
+      }
     }
 
-    if (room.phase === "result" && room.result) {
-      const result = room.result;
-
-      state.result = {
-        oc: result.oc,
-        imps: [...room.impSet],
-        acc: result.acc,
-        tally: result.tally,
-      };
-
-      if (result.oc !== "ask") {
-        state.result.civ = room.civ;
-        state.result.imp = room.imp;
-      }
+    if (room.phase === "result") {
+      state.civ = room.civ;
+      state.imp = room.imp;
+      state.impSet = room.impSet;
+      state.result = room.result;
     }
   }
 
@@ -391,204 +282,349 @@ function view(room, player) {
 }
 
 function push(room) {
-  for (const player of room.players.values()) {
-    if (player.ws) send(player.ws, view(room, player));
+  touch(room);
+
+  for (const p of room.players) {
+    send(p.ws, {
+      t: "state",
+      s: view(room, p.id)
+    });
   }
 }
 
-function sendChatLog(room, player) {
-  send(player.ws, {
-    t: "chatlog",
-    log: room.chat,
+function errorTo(ws, message) {
+  send(ws, {
+    t: "err",
+    m: safeText(message, 300)
   });
 }
 
-/* ---------------- game logic ---------------- */
+function sendJoined(ws, room, player) {
+  send(ws, {
+    t: "joined",
+    code: room.code,
+    id: player.id,
+    token: player.token
+  });
 
-function deal(room) {
-  const players = connected(room);
+  send(ws, {
+    t: "state",
+    s: view(room, player.id)
+  });
 
-  if (players.length < MIN_PLAYERS) return false;
+  send(ws, {
+    t: "chatlog",
+    log: room.chat
+  });
+}
 
-  const pair = pickPair(room);
+function createPlayer(name) {
+  return {
+    id: randomId(),
+    token: randomId(),
+    name: safeText(name, 24) || "Player",
+    ws: null,
+    score: 0,
+    v: 0
+  };
+}
 
-  if (!pair || pair.length !== 2) return false;
+function addPlayer(room, player) {
+  if (room.players.length >= MAX_PLAYERS) {
+    return false;
+  }
 
-  const flip = crypto.randomInt(2) === 1;
-  const ids = players.map((p) => p.id);
-
-  room.rd++;
-  room.mode = room.cfg.mode;
-  room.rounds = room.cfg.rounds;
-  room.roundIds = ids;
-
-  room.k = Math.min(
-    room.cfg.imps,
-    Math.floor((ids.length - 1) / 2)
-  );
-
-  room.civ = pair[flip ? 1 : 0];
-  room.imp = pair[flip ? 0 : 1];
-
-  room.impSet = new Set(shuffle(ids).slice(0, room.k));
-  room.order = shuffle(ids);
-  room.turn = 0;
-  room.clues = [];
-  room.votes = new Map();
-  room.seen = new Set();
-  room.result = null;
-  room.phase = "deal";
+  room.players.push(player);
+  touch(room);
 
   return true;
 }
 
-function speakerId(room) {
-  return room.order.length
-    ? room.order[room.turn % room.order.length]
-    : null;
-}
+function promoteHost(room) {
+  const online = connectedPlayers(room);
 
-function advance(room) {
-  room.turn++;
-
-  if (room.turn >= room.order.length * room.rounds) {
-    room.phase = "vote";
+  if (online.length) {
+    room.hostId = online[0].id;
+  } else if (room.players.length) {
+    room.hostId = room.players[0].id;
+  } else {
+    room.hostId = null;
   }
 }
 
-function reveal(room) {
-  if (room.phase !== "vote") return;
+function removePlayer(room, player, disconnect = false) {
+  if (!player) return;
 
-  const tally = {};
+  const wasHost = player.id === room.hostId;
 
-  room.roundIds.forEach((id) => {
-    tally[id] = 0;
-  });
+  room.players = room.players.filter(p => p.id !== player.id);
 
-  for (const picks of room.votes.values()) {
-    picks.forEach((id) => {
-      if (id in tally) tally[id]++;
-    });
+  room.roundIds = room.roundIds.filter(id => id !== player.id);
+  room.impSet = room.impSet.filter(id => id !== player.id);
+  room.order = room.order.filter(id => id !== player.id);
+
+  delete room.seen[player.id];
+  delete room.votes[player.id];
+
+  for (const key of Object.keys(room.votes)) {
+    if (room.votes[key] === player.id) {
+      delete room.votes[key];
+    }
   }
 
-  const accepted = shuffle(room.roundIds)
-    .sort((a, b) => tally[b] - tally[a])
-    .slice(0, room.k);
+  room.clues = room.clues.filter(c => c.id !== player.id);
 
-  const caught = [...room.impSet].every((id) => accepted.includes(id));
+  if (wasHost) promoteHost(room);
 
-  room.result = {
-    oc: caught ? "ask" : "survive",
-    acc: accepted,
-    tally,
+  if (!room.players.length) {
+    rooms.delete(room.code);
+    return;
+  }
+
+  if (room.phase === "clues") {
+    if (room.turn >= room.order.length) {
+      startVote(room);
+    }
+  }
+
+  if (room.phase === "vote") {
+    checkVotes(room);
+  }
+
+  touch(room);
+  push(room);
+}
+
+function resetRound(room) {
+  room.rd = 0;
+  room.phase = "lobby";
+  room.roundIds = [];
+  room.impSet = [];
+  room.order = [];
+  room.turn = 0;
+  room.clues = [];
+  room.votes = {};
+  room.seen = {};
+  room.result = null;
+  room.civ = "";
+  room.imp = "";
+}
+
+function startGame(room) {
+  const players = connectedPlayers(room);
+
+  if (players.length < 3) {
+    return false;
+  }
+
+  const impCount = Math.min(
+    Number(room.cfg.imps) || 1,
+    players.length - 1
+  );
+
+  room.rounds = Number(room.cfg.rounds) || 1;
+  room.mode = room.cfg.mode || "f2f";
+
+  room.rd = 1;
+  room.k = impCount;
+  room.phase = "deal";
+
+  room.roundIds = players.map(p => p.id);
+  room.order = players.map(p => p.id);
+
+  room.turn = 0;
+  room.clues = [];
+  room.votes = {};
+  room.seen = {};
+  room.result = null;
+
+  const pair = chooseWordPair(room);
+
+  room.civ = safeText(pair[0], 100);
+  room.imp = safeText(pair[1], 100);
+
+  const shuffled = players.slice();
+
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  room.impSet = shuffled.slice(0, impCount).map(p => p.id);
+
+  for (const p of players) {
+    room.seen[p.id] = room.impSet.includes(p.id)
+      ? room.imp
+      : room.civ;
+  }
+
+  room.phase = "clues";
+
+  touch(room);
+  push(room);
+
+  return true;
+}
+
+function startVote(room) {
+  room.phase = "vote";
+  room.votes = {};
+  room.turn = room.order.length;
+  touch(room);
+  push(room);
+}
+
+function countVotes(room) {
+  const counts = {};
+
+  for (const voter of room.roundIds) {
+    const votedFor = room.votes[voter];
+
+    if (votedFor && room.roundIds.includes(votedFor)) {
+      counts[votedFor] = (counts[votedFor] || 0) + 1;
+    }
+  }
+
+  return counts;
+}
+
+function finishVote(room) {
+  const counts = countVotes(room);
+  let max = 0;
+  let selected = [];
+
+  for (const id of room.roundIds) {
+    const n = counts[id] || 0;
+
+    if (n > max) {
+      max = n;
+      selected = [id];
+    } else if (n === max && n > 0) {
+      selected.push(id);
+    }
+  }
+
+  let caught = selected.length === 1 ? selected[0] : null;
+  const caughtImposter = caught && room.impSet.includes(caught);
+
+  const result = {
+    votes: counts,
+    caught,
+    caughtImposter: !!caughtImposter,
+    tie: selected.length > 1,
+    selected
   };
 
-  if (!caught) {
-    addScore(room, [...room.impSet], 3);
+  if (caughtImposter) {
+    for (const p of room.players) {
+      if (!room.impSet.includes(p.id)) {
+        p.score = (p.score || 0) + 1;
+      }
+    }
+  } else {
+    for (const p of room.players) {
+      if (room.impSet.includes(p.id)) {
+        p.score = (p.score || 0) + 1;
+      }
+    }
   }
 
+  room.result = result;
   room.phase = "result";
+
+  touch(room);
+  push(room);
 }
 
 function checkVotes(room) {
   if (room.phase !== "vote") return;
 
-  const required = room.roundIds.filter((id) => {
-    const player = room.players.get(id);
-    return player && player.ws;
-  });
+  const active = room.roundIds.filter(id => getPlayer(room, id));
 
-  if (
-    required.length &&
-    required.every((id) => room.votes.has(id))
-  ) {
-    reveal(room);
-  }
-}
-
-function removePlayer(room, id) {
-  const player = room.players.get(id);
-  if (!player) return;
-
-  if (player.ws) {
-    const oldSocket = player.ws;
-    player.ws = null;
-    oldSocket.ctx = null;
-
-    try {
-      oldSocket.close();
-    } catch {}
-  }
-
-  player.v = 0;
-  room.players.delete(id);
-
-  if (!room.players.size) {
-    rooms.delete(room.code);
+  if (active.length === 0) {
+    room.phase = "result";
+    room.result = { caught: null, caughtImposter: false };
+    push(room);
     return;
   }
 
-  promoteHost(room);
-  checkVotes(room);
+  const voted = active.filter(id => room.votes[id]);
+
+  if (voted.length >= active.length) {
+    finishVote(room);
+  }
+}
+
+function advance(room) {
+  if (room.phase === "result") {
+    if (room.rd >= room.rounds) {
+      resetRound(room);
+      push(room);
+      return;
+    }
+
+    room.rd++;
+  }
+
+  const players = connectedPlayers(room);
+
+  if (players.length < 3) {
+    resetRound(room);
+    push(room);
+    return;
+  }
+
+  room.roundIds = players.map(p => p.id);
+  room.order = players.map(p => p.id);
+
+  room.turn = 0;
+  room.clues = [];
+  room.votes = {};
+  room.seen = {};
+  room.result = null;
+
+  room.k = Math.min(Number(room.cfg.imps) || 1, players.length - 1);
+
+  const pair = chooseWordPair(room);
+
+  room.civ = safeText(pair[0], 100);
+  room.imp = safeText(pair[1], 100);
+
+  const shuffled = players.slice();
+
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  room.impSet = shuffled.slice(0, room.k).map(p => p.id);
+
+  for (const p of players) {
+    room.seen[p.id] = room.impSet.includes(p.id)
+      ? room.imp
+      : room.civ;
+  }
+
+  room.phase = "clues";
+
+  touch(room);
   push(room);
 }
 
-function validCfg(message) {
-  if (
-    !Array.isArray(message.cats) ||
-    message.cats.length < 1 ||
-    message.cats.length > 40
-  ) {
-    return null;
-  }
-
-  let cats = [
-    ...new Set(
-      message.cats.filter(
-        (category) =>
-          typeof category === "string" && CAT_IDS.has(category)
-      )
-    ),
-  ];
-
-  if (!cats.length) return null;
-  if (cats.includes("mixed")) cats = ["mixed"];
-
-  return {
-    cats,
-    imps: message.imps === 2 ? 2 : 1,
-    rounds: [1, 2, 3].includes(message.rounds)
-      ? message.rounds
-      : 2,
-    mode: message.mode === "online" ? "online" : "f2f",
-  };
-}
-
-/* ---------------- errors ---------------- */
-
-function err(ws, message, fatal) {
-  send(ws, {
-    t: "err",
-    msg: message,
-    fatal: !!fatal,
-  });
-}
-
-/* ---------------- chat ---------------- */
-
 function handleChat(room, player, message) {
-  const text = cleanChat(message.text);
+  const text = safeText(message.text, 500);
 
   if (!text) return;
 
-  const chatMessage = {
-    n: ++room.seq,
+  const m = {
+    n: ++room.chatSeq,
     id: player.id,
     name: player.name,
     text,
+    at: Date.now()
   };
 
-  room.chat.push(chatMessage);
+  room.chat.push(m);
 
   if (room.chat.length > MAX_CHAT) {
     room.chat.shift();
@@ -596,489 +632,545 @@ function handleChat(room, player, message) {
 
   broadcast(room, {
     t: "chat",
-    m: chatMessage,
+    m
   });
+
+  touch(room);
 }
 
-/* ---------------- voice chat ---------------- */
+function handleVoiceJoin(room, player) {
+  if (!player.v) {
+    player.v = ++room.voiceSeq;
+  }
 
-function joinVoice(room, player) {
-  if (player.v) return;
-
-  room.voiceSeq++;
-  player.v = room.voiceSeq;
-
+  touch(room);
   push(room);
 }
 
-function leaveVoice(room, player) {
-  if (!player.v) return;
-
+function handleVoiceLeave(room, player) {
   player.v = 0;
 
-  // Tell the other clients to close this player's peer connection.
+  touch(room);
   push(room);
 }
 
-function relayRtc(room, player, message) {
-  const targetId = message.to;
+function handleRTC(room, player, message) {
+  const targetId = safeText(message.to, 100);
+  const target = getPlayer(room, targetId);
 
-  if (typeof targetId !== "string" || !message.d || typeof message.d !== "object") {
-    return;
-  }
+  if (!target || target.id === player.id) return;
+  if (!target.ws || target.ws.readyState !== 1) return;
+  if (!player.v || !target.v) return;
 
-  const target = room.players.get(targetId);
-
-  if (
-    !target ||
-    !target.ws ||
-    !player.v ||
-    !target.v ||
-    target.id === player.id
-  ) {
-    return;
-  }
+  if (!message.d || typeof message.d !== "object") return;
 
   const data = message.d;
 
-  // Only allow the WebRTC fields used by the frontend.
-  const valid =
-    ("o" in data && data.o) ||
-    ("a" in data && data.a) ||
-    ("c" in data && data.c);
+  const relay = {};
 
-  if (!valid) return;
+  if (data.c) relay.c = data.c;
+  if (data.s) relay.s = data.s;
+  if (data.a) relay.a = data.a;
+
+  if (!Object.keys(relay).length) return;
 
   send(target.ws, {
     t: "rtc",
     from: player.id,
-    d: data,
+    d: relay
   });
+
+  touch(room);
 }
 
-/* ---------------- WebSocket message handler ---------------- */
-
-function handle(ws, message) {
-  if (message.t === "create") {
-    if (ws.ctx) return;
-
-    if (rooms.size >= MAX_ROOMS) {
-      return err(ws, "The server is busy. Try again later.");
-    }
-
-    const code = newCode();
-
-    if (!code) {
-      return err(ws, "Could not create a game code. Try again.");
-    }
-
-    const room = makeRoom(code);
-    rooms.set(code, room);
-
-    const player = addPlayer(room, message.name, ws);
-
-    room.hostId = player.id;
-    ws.ctx = { room, id: player.id };
-
-    send(ws, {
-      t: "joined",
-      code,
-      token: player.token,
-    });
-
-    sendChatLog(room, player);
-    push(room);
+function handle(room, player, message) {
+  if (!room || !player || !message || typeof message !== "object") {
     return;
   }
 
-  if (message.t === "join") {
-    const code = String(message.code || "")
-      .toUpperCase()
-      .replace(/[^A-Z]/g, "")
-      .slice(0, 4);
-
-    const room = rooms.get(code);
-
-    if (!room) {
-      return err(ws, "No game with that code. Check it and try again.", true);
-    }
-
-    let player = null;
-
-    if (typeof message.token === "string" && message.token) {
-      for (const existing of room.players.values()) {
-        if (existing.token === message.token) {
-          player = existing;
-          break;
-        }
-      }
-    }
-
-    if (player) {
-      if (player.ws && player.ws !== ws) {
-        player.ws.ctx = null;
-
-        try {
-          player.ws.close();
-        } catch {}
-      }
-
-      player.ws = ws;
-    } else {
-      if (ws.ctx) return;
-
-      if (room.players.size >= MAX_PLAYERS) {
-        return err(ws, "That game is full.", true);
-      }
-
-      player = addPlayer(room, message.name, ws);
-    }
-
-    ws.ctx = {
-      room,
-      id: player.id,
-    };
-
-    room.emptySince = null;
-
-    const host = room.players.get(room.hostId);
-    if (!host || !host.ws) room.hostId = player.id;
-
-    send(ws, {
-      t: "joined",
-      code,
-      token: player.token,
-    });
-
-    sendChatLog(room, player);
-    push(room);
-    return;
-  }
-
-  const context = ws.ctx;
-  if (!context) return;
-
-  const room = context.room;
-  const player = room.players.get(context.id);
-
-  if (!player || player.ws !== ws) return;
-
-  const isHost = room.hostId === player.id;
-  const inRound = room.roundIds.includes(player.id);
+  touch(room);
 
   switch (message.t) {
+    case "chat":
+      handleChat(room, player, message);
+      break;
+
+    case "vjoin":
+      handleVoiceJoin(room, player);
+      break;
+
+    case "vleave":
+      handleVoiceLeave(room, player);
+      break;
+
+    case "rtc":
+      handleRTC(room, player, message);
+      break;
+
     case "cfg": {
-      if (!isHost || room.phase !== "lobby") return;
+      if (room.hostId !== player.id) return;
+      if (room.phase !== "lobby") return;
+      if (!validCfg(message.cfg)) {
+        errorTo(player.ws, "Invalid settings");
+        return;
+      }
 
-      const config = validCfg(message);
-      if (!config) return;
+      const cfg = message.cfg;
 
-      room.cfg = config;
+      room.cfg = {
+        cats: Array.isArray(cfg.cats) && cfg.cats.length
+          ? cfg.cats.slice(0, 50).map(x => safeText(x, 60))
+          : ["mixed"],
+        imps: Math.max(1, Math.min(10, Number(cfg.imps) || 1)),
+        rounds: Math.max(1, Math.min(20, Number(cfg.rounds) || 1)),
+        mode: safeText(cfg.mode, 30) || "f2f"
+      };
+
+      push(room);
       break;
     }
 
     case "deal": {
-      const allowed =
-        room.phase === "lobby" ||
-        (
-          room.phase === "result" &&
-          room.result &&
-          room.result.oc !== "ask"
-        );
+      if (room.hostId !== player.id) return;
 
-      if (!isHost || !allowed) return;
-
-      if (!deal(room)) {
-        return err(ws, `Need at least ${MIN_PLAYERS} connected players.`);
+      if (!startGame(room)) {
+        errorTo(player.ws, "At least 3 online players are required.");
       }
 
       break;
     }
 
     case "seen":
-      if (room.phase !== "deal" || !inRound) return;
+      if (room.phase !== "deal") return;
+      if (!room.roundIds.includes(player.id)) return;
 
-      room.seen.add(player.id);
+      room.phase = "clues";
+      push(room);
       break;
 
     case "clues":
-      if (!isHost || room.phase !== "deal") return;
+      if (room.phase !== "clues") return;
+      if (room.turn >= room.order.length) return;
 
-      room.phase = "clues";
-      room.turn = 0;
+      room.turn++;
+      push(room);
+
+      if (room.turn >= room.order.length) {
+        startVote(room);
+      }
       break;
 
     case "clue": {
-      if (
-        room.phase !== "clues" ||
-        room.mode !== "online" ||
-        speakerId(room) !== player.id
-      ) {
-        return;
+      if (room.phase !== "clues") return;
+      if (!room.roundIds.includes(player.id)) return;
+
+      const text = safeText(message.text || message.clue, 100);
+
+      if (!text) return;
+
+      const existing = room.clues.find(c => c.id === player.id);
+
+      if (existing) {
+        existing.text = text;
+      } else {
+        room.clues.push({
+          id: player.id,
+          name: player.name,
+          text
+        });
       }
 
-      const text = String(message.text == null ? "" : message.text)
-        .replace(/[\u0000-\u001f\u007f<>]/g, "")
-        .trim()
-        .slice(0, 60);
-
-      room.clues.push({
-        id: player.id,
-        round: Math.floor(room.turn / room.order.length) + 1,
-        text: text || "(no clue)",
-      });
-
-      advance(room);
+      push(room);
       break;
     }
 
     case "done":
-      if (
-        room.phase !== "clues" ||
-        room.mode !== "f2f" ||
-        speakerId(room) !== player.id
-      ) {
-        return;
-      }
+      if (room.phase !== "clues") return;
+      if (room.turn >= room.order.length) return;
 
-      advance(room);
+      room.turn++;
+      push(room);
+
+      if (room.turn >= room.order.length) {
+        startVote(room);
+      }
       break;
 
     case "skip":
-      if (!isHost || room.phase !== "clues") return;
+      if (room.phase !== "clues") return;
+      if (room.turn >= room.order.length) return;
 
-      if (room.mode === "online") {
-        room.clues.push({
-          id: speakerId(room),
-          round: Math.floor(room.turn / room.order.length) + 1,
-          text: "(skipped)",
-        });
+      room.turn++;
+      push(room);
+
+      if (room.turn >= room.order.length) {
+        startVote(room);
       }
-
-      advance(room);
       break;
 
     case "tovote":
-      if (!isHost || room.phase !== "clues") return;
-
-      room.phase = "vote";
+      if (room.phase === "clues") {
+        startVote(room);
+      }
       break;
 
     case "vote": {
-      if (
-        room.phase !== "vote" ||
-        !inRound ||
-        room.votes.has(player.id)
-      ) {
-        return;
-      }
+      if (room.phase !== "vote") return;
 
-      const picks = Array.isArray(message.picks)
-        ? [...new Set(
-            message.picks.filter((id) => typeof id === "string")
-          )]
-        : [];
+      const targetId = safeText(message.to || message.id, 100);
 
-      if (
-        picks.length !== room.k ||
-        picks.some(
-          (id) =>
-            id === player.id ||
-            !room.roundIds.includes(id)
-        )
-      ) {
-        return;
-      }
+      if (!room.roundIds.includes(targetId)) return;
+      if (targetId === player.id) return;
 
-      room.votes.set(player.id, picks);
+      room.votes[player.id] = targetId;
+
+      push(room);
       checkVotes(room);
       break;
     }
 
     case "reveal":
-      if (!isHost || room.phase !== "vote") return;
+      if (room.phase !== "vote") return;
 
-      reveal(room);
+      if (room.hostId === player.id) {
+        finishVote(room);
+      }
+
       break;
 
     case "guess":
-      if (
-        !isHost ||
-        room.phase !== "result" ||
-        !room.result ||
-        room.result.oc !== "ask"
-      ) {
-        return;
-      }
+      if (room.phase !== "result") return;
+      if (!room.impSet.includes(player.id)) return;
 
-      if (message.ok === true) {
-        room.result.oc = "steal";
-        addScore(room, [...room.impSet], 2);
+      const guess = safeText(message.word || message.guess, 100);
+
+      if (guess && guess.toLowerCase() === room.civ.toLowerCase()) {
+        for (const id of room.impSet) {
+          const p = getPlayer(room, id);
+          if (p) p.score = (p.score || 0) + 2;
+        }
+
+        room.result = room.result || {};
+        room.result.guessCorrect = true;
+        push(room);
       } else {
-        room.result.oc = "group";
-
-        addScore(
-          room,
-          room.roundIds.filter((id) => !room.impSet.has(id)),
-          1
-        );
+        room.result = room.result || {};
+        room.result.guessCorrect = false;
+        push(room);
       }
 
       break;
 
     case "lobby":
-      if (!isHost) return;
+      if (room.hostId !== player.id) return;
 
-      room.phase = "lobby";
+      resetRound(room);
+      push(room);
       break;
 
     case "reset":
-      if (!isHost) return;
+      if (room.hostId !== player.id) return;
 
-      room.players.forEach((p) => {
+      for (const p of room.players) {
         p.score = 0;
-      });
+      }
 
-      room.used.clear();
-      room.rd = 0;
-      room.phase = "lobby";
-      room.roundIds = [];
-      room.impSet.clear();
-      room.order = [];
-      room.turn = 0;
-      room.clues = [];
-      room.votes.clear();
-      room.seen.clear();
-      room.result = null;
+      resetRound(room);
+      push(room);
       break;
 
     case "kick": {
-      if (
-        !isHost ||
-        typeof message.id !== "string" ||
-        message.id === player.id ||
-        !room.players.has(message.id)
-      ) {
-        return;
+      if (room.hostId !== player.id) return;
+
+      const targetId = safeText(message.id || message.to, 100);
+      const target = getPlayer(room, targetId);
+
+      if (!target || target.id === player.id) return;
+
+      send(target.ws, { t: "kicked" });
+
+      removePlayer(room, target);
+
+      if (target.ws && target.ws.readyState === 1) {
+        target.ws.close();
       }
 
-      const target = room.players.get(message.id);
-
-      if (target.ws) {
-        send(target.ws, { t: "kicked" });
-      }
-
-      removePlayer(room, message.id);
-      return;
+      break;
     }
 
     case "leave":
-      removePlayer(room, player.id);
-      return;
+      removePlayer(room, player);
 
-    case "chat":
-      handleChat(room, player, message);
-      return;
+      if (player.ws && player.ws.readyState === 1) {
+        player.ws.close();
+      }
 
-    case "vjoin":
-      joinVoice(room, player);
-      return;
-
-    case "vleave":
-      leaveVoice(room, player);
-      return;
-
-    case "rtc":
-      relayRtc(room, player, message);
-      return;
+      break;
 
     default:
-      return;
+      break;
   }
-
-  push(room);
 }
 
-/* ---------------- disconnect handling ---------------- */
+function reconnect(room, token, ws) {
+  const player = getByToken(room, token);
 
-function onClose(ws) {
-  const context = ws.ctx;
-  if (!context) return;
+  if (!player) return null;
 
-  const { room, id } = context;
-  const player = room.players.get(id);
+  if (player.ws && player.ws !== ws) {
+    try {
+      player.ws.close();
+    } catch (_) {}
+  }
 
-  // Ignore old sockets after a player reconnects.
-  if (!player || player.ws !== ws) return;
+  player.ws = ws;
+  player.v = 0;
+
+  touch(room);
+
+  sendJoined(ws, room, player);
+  push(room);
+
+  return player;
+}
+
+function onClose(room, player, ws) {
+  if (!room || !player) return;
+
+  // Ignore an old connection closing after a reconnect.
+  if (player.ws !== ws) return;
 
   player.ws = null;
   player.v = 0;
-  ws.ctx = null;
 
-  promoteHost(room);
-  checkVotes(room);
+  touch(room);
 
-  if (!connected(room).length) {
-    room.emptySince = Date.now();
+  if (player.id === room.hostId) {
+    promoteHost(room);
   }
 
   push(room);
 }
 
-/* ---------------- WebSocket setup ---------------- */
+function parseMessage(raw) {
+  try {
+    return JSON.parse(raw.toString());
+  } catch (_) {
+    return null;
+  }
+}
+
+function handleConnection(ws) {
+  let room = null;
+  let player = null;
+
+  ws.on("message", raw => {
+    if (raw.length > MAX_MESSAGE) {
+      ws.close(1009, "Message too large");
+      return;
+    }
+
+    const message = parseMessage(raw);
+
+    if (!message || typeof message !== "object") {
+      return;
+    }
+
+    // Create a new room.
+    if (message.t === "create") {
+      if (room || player) return;
+
+      if (rooms.size >= MAX_ROOMS) {
+        errorTo(ws, "Server is full. Try again later.");
+        return;
+      }
+
+      player = createPlayer(message.name);
+      player.ws = ws;
+
+      room = createRoom(player);
+
+      sendJoined(ws, room, player);
+      push(room);
+
+      return;
+    }
+
+    // Join an existing room.
+    if (message.t === "join") {
+      if (room || player) return;
+
+      const code = safeText(message.code, 10).toUpperCase();
+      const token = safeText(message.token, 100);
+
+      room = rooms.get(code);
+
+      if (!room) {
+        errorTo(ws, "Room not found.");
+        room = null;
+        return;
+      }
+
+      if (token) {
+        player = reconnect(room, token, ws);
+
+        if (player) {
+          push(room);
+          return;
+        }
+      }
+
+      if (room.phase !== "lobby") {
+        errorTo(ws, "This game is already in progress.");
+        room = null;
+        return;
+      }
+
+      if (room.players.length >= MAX_PLAYERS) {
+        errorTo(ws, "Room is full.");
+        room = null;
+        return;
+      }
+
+      player = createPlayer(message.name);
+      player.ws = ws;
+
+      if (!addPlayer(room, player)) {
+        errorTo(ws, "Room is full.");
+        room = null;
+        player = null;
+        return;
+      }
+
+      sendJoined(ws, room, player);
+      push(room);
+
+      return;
+    }
+
+    // All other messages require room/player authentication.
+    if (!room || !player) return;
+
+    if (player.ws !== ws) return;
+
+    handle(room, player, message);
+  });
+
+  ws.on("close", () => {
+    onClose(room, player, ws);
+  });
+
+  ws.on("error", err => {
+    console.warn("WebSocket error:", err.message);
+  });
+}
+
+/* ---------------- HTTP ---------------- */
+
+const server = http.createServer((req, res) => {
+  const pathname = new URL(req.url, "http://localhost").pathname;
+
+  if (pathname === "/healthz") {
+    res.writeHead(200, {
+      "Content-Type": "text/plain",
+      "Cache-Control": "no-store"
+    });
+
+    res.end("ok");
+    return;
+  }
+
+  // WebRTC ICE server configuration.
+  if (pathname === "/ice") {
+    const ice = [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" }
+    ];
+
+    const turnUrls = safeText(process.env.TURN_URLS, 1000);
+    const turnUsername = safeText(process.env.TURN_USERNAME, 300);
+    const turnCredential = safeText(process.env.TURN_CREDENTIAL, 500);
+
+    if (turnUrls && turnUsername && turnCredential) {
+      const urls = turnUrls
+        .split(",")
+        .map(x => x.trim())
+        .filter(Boolean);
+
+      if (urls.length) {
+        ice.push({
+          urls,
+          username: turnUsername,
+          credential: turnCredential
+        });
+      }
+    }
+
+    res.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store"
+    });
+
+    res.end(JSON.stringify({ ice }));
+    return;
+  }
+
+  // Serve static files from /public.
+  let filePath;
+
+  if (pathname === "/") {
+    filePath = path.join(PUBLIC, "index.html");
+  } else {
+    const relative = decodeURIComponent(pathname)
+      .replace(/^\/+/, "");
+
+    filePath = path.join(PUBLIC, relative);
+  }
+
+  const resolved = path.resolve(filePath);
+
+  if (!resolved.startsWith(path.resolve(PUBLIC) + path.sep) &&
+      resolved !== path.resolve(PUBLIC, "index.html")) {
+    res.writeHead(403);
+    res.end("Forbidden");
+    return;
+  }
+
+  fs.readFile(resolved, (err, data) => {
+    if (err) {
+      res.writeHead(err.code === "ENOENT" ? 404 : 500, {
+        "Content-Type": "text/plain; charset=utf-8"
+      });
+
+      res.end(err.code === "ENOENT" ? "Not found" : "Server error");
+      return;
+    }
+
+    const ext = path.extname(resolved).toLowerCase();
+
+    res.writeHead(200, {
+      "Content-Type": MIME[ext] || "application/octet-stream",
+      "Cache-Control": ext === ".html"
+        ? "no-cache"
+        : "public, max-age=3600"
+    });
+
+    res.end(data);
+  });
+});
 
 const wss = new WebSocketServer({
   server,
   path: "/ws",
-  maxPayload: 16384,
+  maxPayload: MAX_MESSAGE
 });
 
-wss.on("connection", (ws) => {
-  ws.isAlive = true;
-  ws.ctx = null;
+wss.on("connection", handleConnection);
 
-  ws.on("pong", () => {
-    ws.isAlive = true;
-  });
-
-  ws.on("message", (raw) => {
-    let message;
-
-    try {
-      message = JSON.parse(raw.toString());
-    } catch {
-      return;
-    }
-
-    if (
-      !message ||
-      typeof message !== "object" ||
-      Array.isArray(message) ||
-      typeof message.t !== "string"
-    ) {
-      return;
-    }
-
-    try {
-      handle(ws, message);
-    } catch (error) {
-      console.error("WebSocket handler error:", error);
-      err(ws, "Something went wrong. Please try again.");
-    }
-  });
-
-  ws.on("close", () => onClose(ws));
-
-  ws.on("error", (error) => {
-    console.error("WebSocket error:", error.message);
-  });
-});
-
-/* ---------------- heartbeat ---------------- */
-
-setInterval(() => {
+// Heartbeat: remove dead WebSocket connections.
+const heartbeat = setInterval(() => {
   for (const ws of wss.clients) {
-    if (!ws.isAlive) {
+    if (ws.isAlive === false) {
       ws.terminate();
       continue;
     }
@@ -1087,33 +1179,38 @@ setInterval(() => {
 
     try {
       ws.ping();
-    } catch {}
+    } catch (_) {
+      ws.terminate();
+    }
   }
-}, 25000).unref();
+}, 30000);
 
-/* ---------------- room cleanup ---------------- */
+wss.on("connection", ws => {
+  ws.isAlive = true;
 
-setInterval(() => {
+  ws.on("pong", () => {
+    ws.isAlive = true;
+  });
+});
+
+// Remove empty/stale rooms.
+const cleanup = setInterval(() => {
   const now = Date.now();
 
   for (const [code, room] of rooms) {
-    if (
-      !connected(room).length &&
-      room.emptySince &&
-      now - room.emptySince > ROOM_IDLE_MS
-    ) {
+    const online = connectedPlayers(room);
+
+    if (online.length === 0 && now - room.lastActivity > ROOM_IDLE_MS) {
       rooms.delete(code);
     }
   }
-}, 60000).unref();
+}, 60000);
 
-/* ---------------- start ---------------- */
-
-server.listen(PORT, () => {
-  console.log(`Odd Word Out running on port ${PORT}`);
+server.on("close", () => {
+  clearInterval(heartbeat);
+  clearInterval(cleanup);
 });
 
-module.exports = {
-  server,
-  rooms,
-};
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`Odd Word Out server listening on port ${PORT}`);
+});
