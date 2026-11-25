@@ -239,6 +239,7 @@ function view(room, viewerId) {
     host: room.hostId,
     hostId: room.hostId,
     players,
+    cats: WORDS.cats,
     cfg: room.cfg,
 
     phase: room.phase,
